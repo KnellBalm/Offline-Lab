@@ -3,13 +3,19 @@ import json
 from datetime import date
 import streamlit as st
 
+from config.db import get_duckdb_path
 from engine.duckdb_engine import DuckDBEngine
 from services.pa_submit import submit_pa
 from common.logging import get_logger
 
 logger = get_logger(__name__)
 
-duck = DuckDBEngine("data/pa_lab.duckdb")
+
+def get_duck():
+    """DuckDB 연결 생성 (동시 접근 문제 방지)"""
+    return DuckDBEngine(get_duckdb_path())
+
+
 today = date.today().isoformat()
 
 st.title("📊 Offline Analytics Lab")
@@ -99,10 +105,15 @@ with tab2:
         st.info("오늘 생성된 로그 분석 업무 요청이 없습니다.")
         st.stop()
 
-    submitted = duck.fetchall(
-        "SELECT problem_id FROM stream_submissions WHERE session_date=?",
-        [today]
-    )
+    # 제출 상태 조회
+    duck = get_duck()
+    try:
+        submitted = duck.fetchall(
+            "SELECT problem_id FROM stream_submissions WHERE session_date=?",
+            [today]
+        )
+    finally:
+        duck.close()
     submitted_ids = {r["problem_id"] for r in submitted}
 
     for t in tasks:
@@ -128,12 +139,17 @@ with tab2:
             st.success("업무 완료 처리됨")
         else:
             if st.button(f"업무 완료 처리: {t['task_id']}"):
-                duck.execute(
-                    """
-                    INSERT INTO stream_submissions (session_date, problem_id, submitted_at)
-                    VALUES (?, ?, now())
-                    """,
-                    [today, t["task_id"]]
-                )
+                duck = get_duck()
+                try:
+                    duck.execute(
+                        """
+                        INSERT INTO stream_submissions (session_date, problem_id, submitted_at)
+                        VALUES (?, ?, now())
+                        """,
+                        [today, t["task_id"]]
+                    )
+                finally:
+                    duck.close()
                 st.success("업무 완료로 기록되었습니다")
-                st.experimental_rerun()
+                st.rerun()
+

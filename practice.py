@@ -2,7 +2,7 @@ import json
 from engine.postgres_engine import PostgresEngine
 from engine.duckdb_engine import DuckDBEngine
 from grader.grader import grade
-from config import PROBLEM_STORE
+from config.settings import PROBLEM_STORE
 
 engine = DuckDBEngine()  # or PostgresEngine()
 

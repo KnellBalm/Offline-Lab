@@ -1,6 +1,12 @@
 # scripts/run_daily.py
+"""
+일일 데이터 생성 및 문제 출제 스케줄러
+- Docker 컨테이너에서 상시 실행
+- 매일 자정에 데이터 생성
+"""
 from __future__ import annotations
 
+import time
 from datetime import date, datetime, timedelta
 import os
 
@@ -10,10 +16,6 @@ load_dotenv()
 from engine.postgres_engine import PostgresEngine
 from engine.duckdb_engine import DuckDBEngine
 from generator.data_generator_advanced import generate_data
-from problems.generator import generate as gen_problems
-from problems.stream_generator import generate_stream_problems
-from problems.stream_generator import generate_stream_tasks
-
 from config.db import PostgresEnv
 
 from common.logging import get_logger
@@ -22,28 +24,25 @@ logger = get_logger(__name__)
 # -------------------------------------------------
 # 환경 변수
 # -------------------------------------------------
-STREAM_REFRESH_WEEKDAY = int(os.getenv("STREAM_REFRESH_WEEKDAY", "6")) # Monday = 0
-# Stream 생성한 날에만
-if weekday == STREAM_REFRESH_WEEKDAY:
-    stream_problem_path = generate_stream_problems(today, pg)
-    logger.info(f"[INFO] stream problems generated: {stream_problem_path}")
-
-if weekday == STREAM_REFRESH_WEEKDAY:
-    generate_stream_tasks(today, pg)
+STREAM_REFRESH_WEEKDAY = int(os.getenv("STREAM_REFRESH_WEEKDAY", "6"))  # Sunday = 6
+RUN_INTERVAL_HOURS = int(os.getenv("RUN_INTERVAL_HOURS", "24"))
 
 
-# -------------------------------------------------
-# 메인
-# -------------------------------------------------
-def run_daily():
+def run_daily_pipeline():
+    """일일 파이프라인 실행"""
     today = date.today()
     weekday = today.weekday()
+
+    logger.info(f"[START] Daily pipeline for {today}")
 
     pg = PostgresEngine(PostgresEnv().dsn())
     duck = DuckDBEngine("data/pa_lab.duckdb")
 
     # DuckDB 스키마 초기화
-    duck.execute(open("sql/init_duckdb.sql").read())
+    try:
+        duck.execute(open("sql/init_duckdb.sql").read())
+    except FileNotFoundError:
+        logger.warning("[WARN] sql/init_duckdb.sql not found, skipping")
 
     # ---------------------------------------------
     # 1. 전날 세션 자동 SKIPPED 처리
@@ -63,41 +62,59 @@ def run_daily():
     # ---------------------------------------------
     if duck.exists("daily_sessions", session_date=today.isoformat()):
         logger.info("[INFO] today's session already exists")
+        pg.close()
+        duck.close()
         return
 
     # ---------------------------------------------
     # 3. PA 데이터는 매일 생성
     # ---------------------------------------------
     logger.info("[INFO] generating PA data (daily)")
-    generate_data(modes=("pa",))
+    try:
+        generate_data(modes=("pa",))
+    except Exception as e:
+        logger.error(f"[ERROR] PA data generation failed: {e}")
 
     # ---------------------------------------------
     # 4. Stream 데이터는 주 1회만 생성
     # ---------------------------------------------
     if weekday == STREAM_REFRESH_WEEKDAY:
         logger.info("[INFO] generating STREAM data (weekly)")
-        generate_data(modes=("stream",))
+        try:
+            generate_data(modes=("stream",))
+        except Exception as e:
+            logger.error(f"[ERROR] Stream data generation failed: {e}")
     else:
         logger.info("[INFO] skipping STREAM generation today")
 
     # ---------------------------------------------
-    # 5. 문제 + expected 테이블 생성 (PA 기준)
+    # 5. 세션 기록
     # ---------------------------------------------
-    problem_path = gen_problems(today, pg)
+    duck.insert("daily_sessions", {
+        "session_date": today.isoformat(),
+        "generated_at": datetime.now(),
+        "status": "GENERATED"
+    })
 
-    # ---------------------------------------------
-    # 6. 세션 기록
-    # ---------------------------------------------
-    duck.execute(
-        """
-        INSERT INTO daily_sessions
-        (session_date, problem_set_path, generated_at, status)
-        VALUES (?, ?, ?, 'GENERATED')
-        """,
-        [today.isoformat(), problem_path, datetime.now()],
-    )
-
+    pg.close()
+    duck.close()
     logger.info("[DONE] daily pipeline completed")
 
+
+def run_scheduler():
+    """스케줄러 루프 - Docker 컨테이너에서 상시 실행"""
+    logger.info(f"[SCHEDULER] Starting with {RUN_INTERVAL_HOURS}h interval")
+    
+    while True:
+        try:
+            run_daily_pipeline()
+        except Exception as e:
+            logger.error(f"[SCHEDULER] Pipeline error: {e}")
+        
+        # 다음 실행까지 대기
+        logger.info(f"[SCHEDULER] Sleeping for {RUN_INTERVAL_HOURS} hours")
+        time.sleep(RUN_INTERVAL_HOURS * 3600)
+
+
 if __name__ == "__main__":
-    run_daily()
+    run_scheduler()

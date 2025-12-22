@@ -1,11 +1,68 @@
 services:
-  pa_lab:
-    image: python:3.12-slim
-    working_dir: /app
+  # PostgreSQL 데이터베이스
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: pa_lab
+      POSTGRES_PASSWORD: pa_lab
+      POSTGRES_DB: pa_lab
     volumes:
-      - ./:/app
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pa_lab"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Streamlit 대시보드 (상시 운영)
+  dashboard:
+    build: .
+    working_dir: /app
+    environment:
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_USER=pa_lab
+      - PG_PASSWORD=pa_lab
+      - PG_DB=pa_lab
+      - DUCKDB_PATH=/app/data/pa_lab.duckdb
+      - USE_GEMINI=${USE_GEMINI:-0}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
       - ./data:/app/data
+      - ./problems:/app/problems
     ports:
       - "8501:8501"
-    command: bash -lc "pip install -r requirements.txt && streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0
     restart: unless-stopped
+
+  # 일일 데이터 생성 스케줄러
+  scheduler:
+    build: .
+    working_dir: /app
+    environment:
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_USER=pa_lab
+      - PG_PASSWORD=pa_lab
+      - PG_DB=pa_lab
+      - DUCKDB_PATH=/app/data/pa_lab.duckdb
+      - USE_GEMINI=${USE_GEMINI:-0}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+      - ./problems:/app/problems
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: python -m scripts.run_daily
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -10,15 +10,19 @@ from engine.postgres_engine import PostgresEngine
 from engine.duckdb_engine import DuckDBEngine
 from problems.gemini import grade_pa_submission
 from common.logging import get_logger
+from config.db import PostgresEnv, get_duckdb_path
 
 logger = get_logger(__name__)
 
-# ============================
-# 환경: DB 엔진 선택
-# ============================
-# PA 정답 비교는 Postgres 기준 권장
-pg = PostgresEngine()
-duck = DuckDBEngine("data/pa_lab.duckdb")
+
+def _get_pg():
+    """PostgreSQL 연결 생성"""
+    return PostgresEngine(PostgresEnv().dsn())
+
+
+def _get_duck():
+    """DuckDB 연결 생성 (동시 접근 문제 방지)"""
+    return DuckDBEngine(get_duckdb_path())
 
 
 # ============================
@@ -29,26 +33,39 @@ def _run_user_sql(sql_text: str) -> pd.DataFrame:
     사용자 SQL 실행
     """
     logger.info("running user sql")
-    return pg.query_df(sql_text)
+    pg = _get_pg()
+    try:
+        return pg.fetch_df(sql_text)
+    finally:
+        pg.close()
 
 
 def _run_answer_sql(problem_id: str) -> pd.DataFrame:
     """
     문제별 정답 SQL 실행
-    ⚠️ 정답 SQL은 저장하지 않는다고 했으므로
-    -> '정답 결과'를 생성하는 내부 쿼리를 문제 정의에서 가져온다고 가정
     """
-    sql = duck.fetchone(
-        """
-        SELECT answer_sql
-        FROM pa_answers
-        WHERE problem_id = ?
-        """,
-        [problem_id],
-    )["answer_sql"]
-
+    duck = _get_duck()
+    try:
+        result = duck.fetchone(
+            """
+            SELECT answer_sql
+            FROM pa_answers
+            WHERE problem_id = ?
+            """,
+            [problem_id],
+        )
+    finally:
+        duck.close()
+    
+    if result is None:
+        raise ValueError(f"problem_id={problem_id}의 정답 SQL을 찾을 수 없습니다")
+    
     logger.info(f"running answer sql for {problem_id}")
-    return pg.query_df(sql)
+    pg = _get_pg()
+    try:
+        return pg.fetch_df(result["answer_sql"])
+    finally:
+        pg.close()
 
 
 def _compare_df(user_df: pd.DataFrame, answer_df: pd.DataFrame) -> Dict[str, Any]:
@@ -178,18 +195,15 @@ def _save_submission(
     session_date: str,
     submitted_at: datetime,
 ):
-    duck.execute(
-        """
-        INSERT INTO pa_submissions
-        (session_date, problem_id, sql_text, is_correct, feedback, submitted_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        [
-            session_date,
-            problem_id,
-            sql_text,
-            is_correct,
-            feedback,
-            submitted_at,
-        ],
-    )
+    duck = _get_duck()
+    try:
+        duck.insert("pa_submissions", {
+            "session_date": session_date,
+            "problem_id": problem_id,
+            "sql_text": sql_text,
+            "is_correct": is_correct,
+            "feedback": feedback,
+            "submitted_at": submitted_at,
+        })
+    finally:
+        duck.close()
