@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS daily_sessions (
     session_date DATE PRIMARY KEY,
     data_version TEXT,
     problem_set_id TEXT,
+    problem_set_path TEXT,
     generated_at TIMESTAMP,
     started_at TIMESTAMP,
     finished_at TIMESTAMP,
@@ -47,6 +48,26 @@ CREATE TABLE IF NOT EXISTS submissions (
     error_category TEXT,  -- ENGINE_ERROR | LOGIC_ERROR
     error_type TEXT,
     error_message TEXT
+);
+
+CREATE TABLE IF NOT EXISTS pa_submissions (
+    session_date TEXT,
+    problem_id TEXT,
+    sql_text TEXT,
+    is_correct BOOLEAN,
+    feedback TEXT,
+    submitted_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS stream_submissions (
+    session_date TEXT,
+    problem_id TEXT,
+    submitted_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS pa_answers (
+    problem_id TEXT PRIMARY KEY,
+    answer_sql TEXT
 );
 """
 

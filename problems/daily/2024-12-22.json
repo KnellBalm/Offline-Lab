@@ -1,0 +1,72 @@
+[
+  {
+    "problem_id": "retention_001",
+    "difficulty": "easy",
+    "topic": "retention",
+    "requester": "PM팀",
+    "question": "PM팀입니다. 지난 7일간 가입한 사용자들의 Day 1 리텐션을 알고 싶습니다. 가입일 기준으로 다음날 다시 접속한 비율을 일별로 보여주세요.",
+    "context": "신규 기능 런칭 후 리텐션 변화를 모니터링하고 있습니다.",
+    "expected_description": "가입일, Day 1 리텐션율",
+    "expected_columns": ["signup_date", "d1_retention"],
+    "sort_keys": ["signup_date"],
+    "hint": "pa_users의 signup_at과 pa_events의 event_time을 비교해보세요"
+  },
+  {
+    "problem_id": "funnel_001",
+    "difficulty": "easy",
+    "topic": "funnel",
+    "requester": "그로스팀",
+    "question": "그로스팀입니다. 전체 퍼널 전환율을 확인하고 싶습니다. 조회(view) → 장바구니(add_to_cart) → 구매(purchase) 각 단계별 사용자 수와 전환율을 알려주세요.",
+    "context": "퍼널 병목 구간을 찾아 개선 포인트를 발굴하려 합니다.",
+    "expected_description": "단계별 사용자 수, 전환율",
+    "expected_columns": ["step", "users", "conversion_rate"],
+    "sort_keys": ["step"]
+  },
+  {
+    "problem_id": "revenue_001",
+    "difficulty": "medium",
+    "topic": "revenue",
+    "requester": "경영지원팀",
+    "question": "경영지원팀입니다. 최근 30일 일별 매출 추이와 전일 대비 증감률을 알려주세요. 주말에 매출이 떨어지는지도 확인하고 싶습니다.",
+    "context": "월간 경영보고 자료 준비 중입니다.",
+    "expected_description": "일자, 매출, 전일대비 증감률, 요일",
+    "expected_columns": ["order_date", "revenue", "growth_rate", "day_of_week"],
+    "sort_keys": ["order_date"],
+    "hint": "LAG 윈도우 함수를 활용해보세요"
+  },
+  {
+    "problem_id": "cohort_001",
+    "difficulty": "medium",
+    "topic": "cohort",
+    "requester": "마케팅팀",
+    "question": "마케팅팀입니다. 가입 주차별 코호트의 구매 전환율을 분석해주세요. 어떤 주에 가입한 사용자들이 가장 높은 구매율을 보이나요?",
+    "context": "마케팅 캠페인 효과를 주차별로 비교하려 합니다.",
+    "expected_description": "가입 주차, 총 가입자, 구매자, 구매 전환율",
+    "expected_columns": ["signup_week", "total_users", "purchasers", "purchase_rate"],
+    "sort_keys": ["signup_week"]
+  },
+  {
+    "problem_id": "segmentation_001",
+    "difficulty": "hard",
+    "topic": "segmentation",
+    "requester": "CRM팀",
+    "question": "CRM팀입니다. 사용자를 구매 빈도와 총 구매액 기준으로 세그먼트로 나눠주세요. VIP(상위 10%), Regular(중간 40%), Light(하위 50%)로 구분하고 각 세그먼트별 특성을 분석해주세요.",
+    "context": "타겟 마케팅을 위한 세그먼트별 전략 수립이 필요합니다.",
+    "expected_description": "세그먼트명, 사용자수, 평균 구매액, 평균 구매 횟수",
+    "expected_columns": ["segment", "user_count", "avg_revenue", "avg_orders"],
+    "sort_keys": ["segment"],
+    "hint": "NTILE 또는 PERCENT_RANK 함수를 활용해보세요"
+  },
+  {
+    "problem_id": "marketing_001",
+    "difficulty": "hard",
+    "topic": "marketing",
+    "requester": "퍼포먼스마케팅팀",
+    "question": "퍼포먼스마케팅팀입니다. 채널별 CAC(고객획득비용)와 LTV(생애가치)를 비교하고 싶습니다. 각 채널별로 가입한 사용자들의 첫 구매까지 걸린 평균 일수와 총 구매액을 분석해주세요.",
+    "context": "마케팅 예산 배분 최적화를 위한 채널별 ROI 분석입니다.",
+    "expected_description": "채널, 가입자수, 구매 전환율, 평균 첫구매 소요일, 평균 LTV",
+    "expected_columns": ["channel", "signups", "conversion_rate", "avg_days_to_first_purchase", "avg_ltv"],
+    "sort_keys": ["avg_ltv"],
+    "hint": "pa_users의 channel 컬럼과 pa_orders를 조인해보세요"
+  }
+]

@@ -88,10 +88,23 @@ def run_daily_pipeline():
         logger.info("[INFO] skipping STREAM generation today")
 
     # ---------------------------------------------
-    # 5. 세션 기록
+    # 5. 문제 생성 (Gemini API)
+    # ---------------------------------------------
+    logger.info("[INFO] generating problems")
+    try:
+        from problems.generator import generate as gen_problems
+        problem_path = gen_problems(today, pg)
+        logger.info(f"[INFO] problems saved to {problem_path}")
+    except Exception as e:
+        logger.error(f"[ERROR] Problem generation failed: {e}")
+        problem_path = None
+
+    # ---------------------------------------------
+    # 6. 세션 기록
     # ---------------------------------------------
     duck.insert("daily_sessions", {
         "session_date": today.isoformat(),
+        "problem_set_path": problem_path,
         "generated_at": datetime.now(),
         "status": "GENERATED"
     })
