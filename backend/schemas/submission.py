@@ -25,6 +25,7 @@ class SubmitRequest(BaseModel):
     """문제 제출 요청"""
     problem_id: str
     sql: str
+    data_type: str = "pa"
     note: Optional[str] = None
 
 

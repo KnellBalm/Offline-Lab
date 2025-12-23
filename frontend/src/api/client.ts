@@ -1,7 +1,7 @@
 // frontend/src/api/client.ts
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5174';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:15174';
 
 export const api = axios.create({
     baseURL: API_BASE,
@@ -27,8 +27,11 @@ export const sqlApi = {
     execute: (sql: string, limit: number = 100) =>
         api.post('/sql/execute', { sql, limit }),
 
-    submit: (problemId: string, sql: string, note?: string) =>
-        api.post('/sql/submit', { problem_id: problemId, sql, note }),
+    submit: (problemId: string, sql: string, dataType: string = 'pa', note?: string) =>
+        api.post('/sql/submit', { problem_id: problemId, sql, data_type: dataType, note }),
+
+    hint: (problemId: string, sql: string, dataType: string = 'pa') =>
+        api.post('/sql/hint', { problem_id: problemId, sql, data_type: dataType }),
 };
 
 // 통계 API

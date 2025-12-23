@@ -3,70 +3,94 @@
     "problem_id": "retention_001",
     "difficulty": "easy",
     "topic": "retention",
-    "requester": "PM팀",
-    "question": "PM팀입니다. 지난 7일간 가입한 사용자들의 Day 1 리텐션을 알고 싶습니다. 가입일 기준으로 다음날 다시 접속한 비율을 일별로 보여주세요.",
-    "context": "신규 기능 런칭 후 리텐션 변화를 모니터링하고 있습니다.",
-    "expected_description": "가입일, Day 1 리텐션율",
-    "expected_columns": ["signup_date", "d1_retention"],
-    "sort_keys": ["signup_date"],
-    "hint": "pa_users의 signup_at과 pa_events의 event_time을 비교해보세요"
+    "requester": "PM팀 김지현",
+    "question": "안녕하세요~ 혹시 바쁘시면 내일까지도 괜찮은데요, 지난 7일간 가입한 사용자들 Day 1 리텐션 좀 봐주실 수 있으세요? 가입일별로 다음날 다시 온 비율이요! 신규 기능 효과 보려고요 ㅎㅎ",
+    "context": "신규 기능 런칭 후 리텐션 변화 모니터링 중",
+    "expected_columns": [
+      "signup_date",
+      "d1_retention"
+    ],
+    "hint": "pa_users의 signup_at과 pa_events의 event_time을 비교",
+    "answer_sql": "SELECT DATE(u.signup_at) as signup_date, ROUND(COUNT(DISTINCT CASE WHEN DATE(e.event_time) = DATE(u.signup_at) + 1 THEN e.user_id END)::numeric / COUNT(DISTINCT u.user_id) * 100, 2) as d1_retention FROM pa_users u LEFT JOIN pa_events e ON u.user_id = e.user_id WHERE u.signup_at >= CURRENT_DATE - INTERVAL '7 days' GROUP BY DATE(u.signup_at) ORDER BY signup_date"
   },
   {
     "problem_id": "funnel_001",
     "difficulty": "easy",
     "topic": "funnel",
-    "requester": "그로스팀",
-    "question": "그로스팀입니다. 전체 퍼널 전환율을 확인하고 싶습니다. 조회(view) → 장바구니(add_to_cart) → 구매(purchase) 각 단계별 사용자 수와 전환율을 알려주세요.",
-    "context": "퍼널 병목 구간을 찾아 개선 포인트를 발굴하려 합니다.",
-    "expected_description": "단계별 사용자 수, 전환율",
-    "expected_columns": ["step", "users", "conversion_rate"],
-    "sort_keys": ["step"]
+    "requester": "그로스팀 이수민",
+    "question": "수민이에요! 전체 퍼널 좀 급하게 봐야해서요 ㅠㅠ view에서 add_to_cart 거쳐서 purchase까지 각 단계 유저수랑 전환율 알려주실 수 있어요? 병목 찾아야해요",
+    "context": "퍼널 병목 구간 개선 포인트 발굴",
+    "expected_columns": [
+      "step",
+      "users",
+      "conversion_rate"
+    ],
+    "hint": null,
+    "answer_sql": "WITH funnel AS (SELECT 'view' as step, 1 as step_order, COUNT(DISTINCT user_id) as users FROM pa_events WHERE event_name = 'view' UNION ALL SELECT 'add_to_cart', 2, COUNT(DISTINCT user_id) FROM pa_events WHERE event_name = 'add_to_cart' UNION ALL SELECT 'purchase', 3, COUNT(DISTINCT user_id) FROM pa_events WHERE event_name = 'purchase') SELECT step, users, ROUND(users::numeric / FIRST_VALUE(users) OVER (ORDER BY step_order) * 100, 2) as conversion_rate FROM funnel ORDER BY step_order"
   },
   {
     "problem_id": "revenue_001",
     "difficulty": "medium",
     "topic": "revenue",
-    "requester": "경영지원팀",
-    "question": "경영지원팀입니다. 최근 30일 일별 매출 추이와 전일 대비 증감률을 알려주세요. 주말에 매출이 떨어지는지도 확인하고 싶습니다.",
-    "context": "월간 경영보고 자료 준비 중입니다.",
-    "expected_description": "일자, 매출, 전일대비 증감률, 요일",
-    "expected_columns": ["order_date", "revenue", "growth_rate", "day_of_week"],
-    "sort_keys": ["order_date"],
-    "hint": "LAG 윈도우 함수를 활용해보세요"
+    "requester": "경영지원팀 박영호 팀장",
+    "question": "영호입니다. 월간 경영보고 자료 만들어야 하는데 최근 30일 일별 매출이랑 전일대비 증감률 좀 뽑아주세요. 주말에 매출 떨어지는지도 같이 보면 좋겠어요.",
+    "context": "월간 경영보고 자료 준비",
+    "expected_columns": [
+      "order_date",
+      "revenue",
+      "growth_rate",
+      "day_of_week"
+    ],
+    "hint": "LAG 윈도우 함수 활용",
+    "answer_sql": "WITH daily AS (SELECT DATE(order_time) as order_date, SUM(amount) as revenue FROM pa_orders WHERE order_time >= CURRENT_DATE - INTERVAL '30 days' GROUP BY DATE(order_time)) SELECT order_date, revenue, ROUND((revenue - LAG(revenue) OVER (ORDER BY order_date))::numeric / NULLIF(LAG(revenue) OVER (ORDER BY order_date), 0) * 100, 2) as growth_rate, TO_CHAR(order_date, 'Day') as day_of_week FROM daily ORDER BY order_date"
   },
   {
     "problem_id": "cohort_001",
     "difficulty": "medium",
     "topic": "cohort",
-    "requester": "마케팅팀",
-    "question": "마케팅팀입니다. 가입 주차별 코호트의 구매 전환율을 분석해주세요. 어떤 주에 가입한 사용자들이 가장 높은 구매율을 보이나요?",
-    "context": "마케팅 캠페인 효과를 주차별로 비교하려 합니다.",
-    "expected_description": "가입 주차, 총 가입자, 구매자, 구매 전환율",
-    "expected_columns": ["signup_week", "total_users", "purchasers", "purchase_rate"],
-    "sort_keys": ["signup_week"]
+    "requester": "마케팅팀 최유진",
+    "question": "유진이에요~ 가입 주차별 코호트 구매 전환율 분석해주실 수 있어요? 어떤 주에 들어온 애들이 구매 잘하는지 궁금해서요. 캠페인 효과 비교하려구요!",
+    "context": "마케팅 캠페인 효과 주차별 비교",
+    "expected_columns": [
+      "signup_week",
+      "total_users",
+      "purchasers",
+      "purchase_rate"
+    ],
+    "hint": null,
+    "answer_sql": "SELECT DATE_TRUNC('week', u.signup_at)::date as signup_week, COUNT(DISTINCT u.user_id) as total_users, COUNT(DISTINCT o.user_id) as purchasers, ROUND(COUNT(DISTINCT o.user_id)::numeric / COUNT(DISTINCT u.user_id) * 100, 2) as purchase_rate FROM pa_users u LEFT JOIN pa_orders o ON u.user_id = o.user_id GROUP BY DATE_TRUNC('week', u.signup_at) ORDER BY signup_week"
   },
   {
     "problem_id": "segmentation_001",
     "difficulty": "hard",
     "topic": "segmentation",
-    "requester": "CRM팀",
-    "question": "CRM팀입니다. 사용자를 구매 빈도와 총 구매액 기준으로 세그먼트로 나눠주세요. VIP(상위 10%), Regular(중간 40%), Light(하위 50%)로 구분하고 각 세그먼트별 특성을 분석해주세요.",
-    "context": "타겟 마케팅을 위한 세그먼트별 전략 수립이 필요합니다.",
-    "expected_description": "세그먼트명, 사용자수, 평균 구매액, 평균 구매 횟수",
-    "expected_columns": ["segment", "user_count", "avg_revenue", "avg_orders"],
-    "sort_keys": ["segment"],
-    "hint": "NTILE 또는 PERCENT_RANK 함수를 활용해보세요"
+    "requester": "CRM팀 정민수",
+    "question": "민수에요. 좀 급한건데 사용자 세그먼트 나눠야해서요. 구매 빈도랑 총 구매액 기준으로 VIP(상위 10%), Regular(중간 40%), Light(하위 50%)로 나누고 각 세그먼트별 특성 좀 분석해주세요!",
+    "context": "타겟 마케팅 세그먼트별 전략 수립",
+    "expected_columns": [
+      "segment",
+      "user_count",
+      "avg_revenue",
+      "avg_orders"
+    ],
+    "hint": "NTILE 또는 PERCENT_RANK 함수 활용",
+    "answer_sql": "WITH user_stats AS (SELECT user_id, COUNT(*) as order_count, SUM(amount) as total_revenue, NTILE(10) OVER (ORDER BY SUM(amount) DESC) as revenue_decile FROM pa_orders GROUP BY user_id) SELECT CASE WHEN revenue_decile = 1 THEN 'VIP' WHEN revenue_decile <= 5 THEN 'Regular' ELSE 'Light' END as segment, COUNT(*) as user_count, ROUND(AVG(total_revenue), 2) as avg_revenue, ROUND(AVG(order_count), 2) as avg_orders FROM user_stats GROUP BY CASE WHEN revenue_decile = 1 THEN 'VIP' WHEN revenue_decile <= 5 THEN 'Regular' ELSE 'Light' END ORDER BY segment"
   },
   {
     "problem_id": "marketing_001",
     "difficulty": "hard",
     "topic": "marketing",
-    "requester": "퍼포먼스마케팅팀",
-    "question": "퍼포먼스마케팅팀입니다. 채널별 CAC(고객획득비용)와 LTV(생애가치)를 비교하고 싶습니다. 각 채널별로 가입한 사용자들의 첫 구매까지 걸린 평균 일수와 총 구매액을 분석해주세요.",
-    "context": "마케팅 예산 배분 최적화를 위한 채널별 ROI 분석입니다.",
-    "expected_description": "채널, 가입자수, 구매 전환율, 평균 첫구매 소요일, 평균 LTV",
-    "expected_columns": ["channel", "signups", "conversion_rate", "avg_days_to_first_purchase", "avg_ltv"],
-    "sort_keys": ["avg_ltv"],
-    "hint": "pa_users의 channel 컬럼과 pa_orders를 조인해보세요"
+    "requester": "퍼포먼스마케팅 한지영",
+    "question": "지영이에요~ 채널별 성과 분석 급하게 필요해서요! 각 채널로 가입한 유저들 첫구매까지 평균 며칠 걸리는지, 평균 LTV는 얼마인지 좀 봐주세요. 예산 배분해야해서요 ㅠ",
+    "context": "마케팅 예산 배분 최적화 채널별 ROI 분석",
+    "expected_columns": [
+      "channel",
+      "signups",
+      "conversion_rate",
+      "avg_days_to_first_purchase",
+      "avg_ltv"
+    ],
+    "hint": "pa_users의 channel 컬럼과 pa_orders 조인",
+    "answer_sql": "WITH user_first_order AS (SELECT u.user_id, u.channel, u.signup_at, MIN(o.order_time) as first_order_time, SUM(o.amount) as total_revenue FROM pa_users u LEFT JOIN pa_orders o ON u.user_id = o.user_id GROUP BY u.user_id, u.channel, u.signup_at) SELECT channel, COUNT(*) as signups, ROUND(COUNT(first_order_time)::numeric / COUNT(*) * 100, 2) as conversion_rate, ROUND(AVG(EXTRACT(EPOCH FROM (first_order_time - signup_at)) / 86400), 1) as avg_days_to_first_purchase, ROUND(AVG(COALESCE(total_revenue, 0)), 2) as avg_ltv FROM user_first_order GROUP BY channel ORDER BY avg_ltv DESC NULLS LAST"
   }
 ]

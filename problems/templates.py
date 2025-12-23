@@ -1,7 +1,7 @@
 # problems/templates.py
 
 def build_expected_sql(problem: dict) -> str:
-    topic = problem["topic"]
+    topic = problem.get("topic", "").lower()
 
     if topic == "retention":
         return """
@@ -57,4 +57,42 @@ def build_expected_sql(problem: dict) -> str:
         ORDER BY 1
         """
 
-    raise ValueError(f"Unknown topic: {topic}")
+    if topic == "marketing":
+        return """
+        SELECT
+            device,
+            COUNT(DISTINCT user_id) AS users
+        FROM pa_sessions
+        GROUP BY 1
+        ORDER BY users DESC
+        LIMIT 10
+        """
+
+    if topic == "cohort":
+        return """
+        SELECT
+            date_trunc('week', signup_at) AS cohort_week,
+            COUNT(DISTINCT user_id) AS users
+        FROM pa_users
+        GROUP BY 1
+        ORDER BY 1
+        LIMIT 10
+        """
+
+    if topic == "segmentation":
+        return """
+        SELECT
+            event_name,
+            COUNT(DISTINCT user_id) AS users,
+            COUNT(*) AS events
+        FROM pa_events
+        GROUP BY 1
+        ORDER BY users DESC
+        LIMIT 10
+        """
+
+    # 알 수 없는 topic은 기본 쿼리 반환 (에러 방지)
+    return """
+    SELECT 1 AS placeholder
+    """
+

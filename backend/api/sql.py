@@ -1,16 +1,27 @@
 # backend/api/sql.py
 """SQL 실행 API"""
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from backend.schemas.submission import (
     SQLExecuteRequest, SQLExecuteResponse,
     SubmitRequest, SubmitResponse
 )
 from backend.services.sql_service import execute_sql
-from backend.services.grading_service import grade_submission
+from backend.services.grading_service import grade_submission, get_hint
 
 
 router = APIRouter(prefix="/sql", tags=["sql"])
+
+
+class HintRequest(BaseModel):
+    problem_id: str
+    sql: str
+    data_type: str = "pa"
+
+
+class HintResponse(BaseModel):
+    hint: str
 
 
 @router.post("/execute", response_model=SQLExecuteResponse)
@@ -40,5 +51,17 @@ async def submit_answer(request: SubmitRequest):
     return grade_submission(
         problem_id=request.problem_id,
         sql=request.sql,
+        data_type=getattr(request, 'data_type', 'pa'),
         note=request.note
     )
+
+
+@router.post("/hint", response_model=HintResponse)
+async def request_hint(request: HintRequest):
+    """AI 힌트 요청"""
+    hint = get_hint(
+        problem_id=request.problem_id,
+        sql=request.sql,
+        data_type=request.data_type
+    )
+    return HintResponse(hint=hint)

@@ -66,7 +66,7 @@ function AdminPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    fetch('http://localhost:5174/admin/status')
+    fetch('http://localhost:15174/admin/status')
       .then(r => r.json())
       .then(setStatus)
       .catch(() => { });
@@ -76,7 +76,7 @@ function AdminPage() {
     setLoading(true);
     setMessage('');
     try {
-      const res = await fetch('http://localhost:5174/admin/generate-problems', {
+      const res = await fetch('http://localhost:15174/admin/generate-problems', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data_type: 'pa' })
@@ -93,7 +93,7 @@ function AdminPage() {
     setLoading(true);
     setMessage('');
     try {
-      const res = await fetch('http://localhost:5174/admin/refresh-data', {
+      const res = await fetch('http://localhost:15174/admin/refresh-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data_type: type })

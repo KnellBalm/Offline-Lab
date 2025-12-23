@@ -1,0 +1,90 @@
+[
+  {
+    "problem_id": "stream_active_001",
+    "difficulty": "easy",
+    "topic": "active_users",
+    "requester": "데이터팀 김민준",
+    "question": "민준이에요! 오늘 갑자기 DAU 그래프가 확 떨어졌는데요 ㅠㅠ 최근 7일 일별 DAU 추이 좀 급하게 뽑아주실 수 있어요? 뭔가 이상해서요...!",
+    "context": "DAU = 해당 날짜에 이벤트 1건+ 있는 고유 유저 수",
+    "expected_columns": [
+      "event_date",
+      "dau"
+    ],
+    "hint": "stream_events에서 event_time 날짜 변환 후 user_id COUNT DISTINCT",
+    "answer_sql": "SELECT DATE(event_time) as event_date, COUNT(DISTINCT user_id) as dau FROM stream_events WHERE event_time >= CURRENT_DATE - INTERVAL '7 days' GROUP BY DATE(event_time) ORDER BY event_date"
+  },
+  {
+    "problem_id": "stream_session_001",
+    "difficulty": "easy",
+    "topic": "session",
+    "requester": "프로덕트팀 이서연 PM",
+    "question": "서연이에요~ 유저당 평균 세션 수 궁금한데 혹시 금방 볼 수 있을까요? 참여도 지표 정리중이에요!",
+    "context": "세션 수 증가 = 사용자 참여도 좋은 지표",
+    "expected_columns": [
+      "avg_sessions"
+    ],
+    "hint": "stream_sessions 테이블 사용",
+    "answer_sql": "SELECT ROUND(COUNT(*)::numeric / COUNT(DISTINCT user_id), 2) as avg_sessions FROM stream_sessions"
+  },
+  {
+    "problem_id": "stream_event_001",
+    "difficulty": "medium",
+    "topic": "event_analysis",
+    "requester": "마케팅팀 박지호",
+    "question": "지호에요! 이벤트 타입별 발생 건수랑 비율 좀 봐야해서요. 어떤 이벤트가 제일 많이 터지는지 궁금해요 📊 가능하면 오늘 중으로 부탁드려요~",
+    "context": "이벤트 분포 파악 → 사용자 행동 패턴 이해",
+    "expected_columns": [
+      "event_name",
+      "count",
+      "percentage"
+    ],
+    "hint": "전체 이벤트 수 대비 각 타입 비율 계산",
+    "answer_sql": "SELECT event_name, COUNT(*) as count, ROUND(COUNT(*)::numeric / SUM(COUNT(*)) OVER () * 100, 2) as percentage FROM stream_events GROUP BY event_name ORDER BY count DESC"
+  },
+  {
+    "problem_id": "stream_funnel_001",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "그로스팀 최현우",
+    "question": "현우에요! view → click → purchase 퍼널 분석 필요해서요. 단계별 유저수랑 전환율 뽑아주실 수 있나요? 퍼널 개선 포인트 찾아야해요!",
+    "context": "퍼널 개선 포인트 분석",
+    "expected_columns": [
+      "step",
+      "users",
+      "conversion_rate"
+    ],
+    "hint": "각 이벤트 타입별 DISTINCT user_id 카운트",
+    "answer_sql": "WITH funnel AS (SELECT 'view' as step, 1 as step_order, COUNT(DISTINCT user_id) as users FROM stream_events WHERE event_name = 'view' UNION ALL SELECT 'click', 2, COUNT(DISTINCT user_id) FROM stream_events WHERE event_name = 'click' UNION ALL SELECT 'purchase', 3, COUNT(DISTINCT user_id) FROM stream_events WHERE event_name = 'purchase') SELECT step, users, ROUND(users::numeric / FIRST_VALUE(users) OVER (ORDER BY step_order) * 100, 2) as conversion_rate FROM funnel ORDER BY step_order"
+  },
+  {
+    "problem_id": "stream_device_001",
+    "difficulty": "medium",
+    "topic": "device",
+    "requester": "UX팀 정수아",
+    "question": "수아에요~ 디바이스별 세션 수랑 평균 이벤트 수 좀 봐주실 수 있어요? 모바일이랑 웹 사용 패턴 차이 보려구요!",
+    "context": "디바이스별 사용 패턴 분석",
+    "expected_columns": [
+      "device",
+      "session_count",
+      "avg_events_per_session"
+    ],
+    "hint": "stream_sessions와 stream_events 조인",
+    "answer_sql": "SELECT s.device, COUNT(DISTINCT s.session_id) as session_count, ROUND(COUNT(e.event_id)::numeric / COUNT(DISTINCT s.session_id), 2) as avg_events_per_session FROM stream_sessions s LEFT JOIN stream_events e ON s.session_id = e.session_id GROUP BY s.device ORDER BY session_count DESC"
+  },
+  {
+    "problem_id": "stream_power_001",
+    "difficulty": "hard",
+    "topic": "power_users",
+    "requester": "전략기획팀 한동훈 이사",
+    "question": "동훈입니다. 파워유저 분석 좀 부탁드려요. 최근 30일간 7일 이상 활동한 유저를 파워유저로 보고, 이 분들 평균 세션수, 평균 이벤트수 좀 봐주세요. 타겟팅 전략 세워야해서요.",
+    "context": "파워 유저 타겟 마케팅 전략 수립",
+    "expected_columns": [
+      "power_user_count",
+      "avg_active_days",
+      "avg_sessions",
+      "avg_events"
+    ],
+    "hint": "30일 내 7일+ 활동 유저 구한 후 집계",
+    "answer_sql": "WITH user_activity AS (SELECT user_id, COUNT(DISTINCT DATE(event_time)) as active_days, COUNT(DISTINCT session_id) as sessions, COUNT(*) as events FROM stream_events WHERE event_time >= CURRENT_DATE - INTERVAL '30 days' GROUP BY user_id HAVING COUNT(DISTINCT DATE(event_time)) >= 7) SELECT COUNT(*) as power_user_count, ROUND(AVG(active_days), 1) as avg_active_days, ROUND(AVG(sessions), 1) as avg_sessions, ROUND(AVG(events), 1) as avg_events FROM user_activity"
+  }
+]

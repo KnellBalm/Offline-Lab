@@ -9,7 +9,7 @@ services:
     environment:
       - DUCKDB_PATH=/app/data/local.duckdb
     ports:
-      - "5174:8000"
+      - "15174:8000"
     volumes:
       - duckdb_data:/app/data
       - ./problems:/app/problems
@@ -20,7 +20,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:3000"
+      - "15173:3000"
     depends_on:
       - backend
     restart: unless-stopped

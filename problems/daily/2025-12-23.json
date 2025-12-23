@@ -1,0 +1,118 @@
+[
+  {
+    "problem_id": "startup_da_001_easy_funnel",
+    "difficulty": "easy",
+    "topic": "funnel",
+    "requester": "PM팀",
+    "question": "안녕하세요, PM팀입니다. 저희가 지난 주에 결제 페이지 UI를 개선했는데요, 이 개선이 실제 결제 전환율에 어떤 영향을 미쳤는지 확인하고 싶습니다. 특히, '결제 페이지 진입'부터 '결제 완료'까지의 퍼널 전환율이 개선 전후로 어떻게 달라졌는지 알고 싶어요. 지난 7일간의 데이터를 기준으로 일별 추이를 보고 싶습니다. (개선 적용일: 2024-07-01)",
+    "context": "결제 UI 개선이 사용자 경험 및 최종 결제 전환에 긍정적인 영향을 주었는지 데이터로 검증하여 향후 제품 로드맵에 반영하고자 합니다.\n\n[가정하는 테이블 구조]\n- `events` 테이블: `user_id` (사용자 ID), `event_name` (발생 이벤트명, 예: 'view_checkout_page', 'complete_purchase'), `event_timestamp` (이벤트 발생 시각)\n  * 'view_checkout_page'는 결제 페이지 진입을 의미하고, 'complete_purchase'는 결제 완료를 의미합니다.",
+    "expected_description": "일별로 결제 페이지에 진입한 사용자 수, 결제를 완료한 사용자 수, 그리고 해당 일자의 결제 퍼널 전환율을 보여주는 테이블입니다.",
+    "expected_columns": [
+      "date",
+      "checkout_view_users",
+      "purchase_complete_users",
+      "conversion_rate_percent"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "hint": "ROW_NUMBER() 또는 LEAD/LAG 함수는 필요하지 않습니다. 단순 집계를 통해 퍼널 전환율을 계산할 수 있습니다."
+  },
+  {
+    "problem_id": "startup_da_002_easy_revenue",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "세일즈팀",
+    "question": "안녕하세요, 세일즈팀입니다. 매일 아침 회의 때 전날의 매출 현황을 빠르게 공유해야 합니다. 최근 30일간의 일별 총 매출액과 총 구매 건수를 한눈에 볼 수 있는 리포트가 필요해요. 결제는 완료되었으나 나중에 취소된 건들은 제외하고, 실제 순 매출만 보고 싶습니다.",
+    "context": "일별 매출 성과를 추적하고 신속하게 의사결정에 활용하기 위함입니다.\n\n[가정하는 테이블 구조]\n- `orders` 테이블: `order_id` (주문 ID), `user_id` (사용자 ID), `order_timestamp` (주문 시각), `amount` (주문 금액), `payment_status` (결제 상태, 예: 'completed', 'pending', 'cancelled')",
+    "expected_description": "최근 30일간의 일별 총 매출액과 완료된 총 구매 건수를 보여주는 테이블입니다.",
+    "expected_columns": [
+      "date",
+      "total_revenue",
+      "total_completed_orders"
+    ],
+    "sort_keys": [
+      "date"
+    ]
+  },
+  {
+    "problem_id": "startup_da_003_medium_retention",
+    "difficulty": "medium",
+    "topic": "retention",
+    "requester": "그로스팀",
+    "question": "그로스팀입니다. 신규 가입자들의 초기 이탈을 줄이는 것이 목표입니다. 저희가 진행하는 캠페인들의 성과를 측정하기 위해, 주간 단위 신규 가입자 코호트의 '가입일로부터 7일 후 리텐션(Day 7 Retention)' 데이터를 구하고 싶습니다. 지난 8주간의 데이터를 기준으로, 가입 주차별로 D7 리텐션이 어떻게 되는지 알려주세요.",
+    "context": "신규 유저 유입 채널 및 온보딩 개선 효과를 측정하고, 장기적인 사용자 유지 전략 수립의 기초 자료로 활용할 것입니다. D7 리텐션은 '가입일로부터 7일째 되는 날 (가입일 포함 8일째) 활동한 유저 수 / 총 가입 유저 수'로 계산합니다.\n\n[가정하는 테이블 구조]\n- `users` 테이블: `user_id` (사용자 ID), `signup_date` (가입일)\n- `events` 테이블: `user_id` (사용자 ID), `event_timestamp` (이벤트 발생 시각, 사용자의 모든 활동을 의미)",
+    "expected_description": "가입 주차별로 총 가입 사용자 수, 가입 7일차에 활동한 사용자 수, 그리고 D7 리텐션율을 보여주는 테이블입니다.",
+    "expected_columns": [
+      "signup_week",
+      "total_cohort_users",
+      "retained_users_day7",
+      "day7_retention_rate_percent"
+    ],
+    "sort_keys": [
+      "signup_week"
+    ]
+  },
+  {
+    "problem_id": "startup_da_004_medium_marketing",
+    "difficulty": "medium",
+    "topic": "marketing",
+    "requester": "마케팅팀",
+    "question": "마케팅팀입니다. 저희가 다양한 채널에서 광고를 집행하고 있는데요, 각 채널별 효율을 분석해서 예산 분배를 최적화하고 싶습니다. 지난달 (예: 2024년 6월) 기준으로, 각 마케팅 채널에서 유입된 신규 가입자 수와 해당 채널의 신규 가입자 획득 비용 (CAC)을 계산해주세요. CAC는 '총 마케팅 비용 / 신규 가입자 수'로 계산하며, 채널별 마케팅 비용은 [여기](https://internal_link_to_marketing_cost_spreadsheet) 시트를 참고해주시면 됩니다. (SQL 문제에서는 이 비용을 테이블에 있다고 가정하고 계산해주세요.)",
+    "context": "마케팅 예산의 효율적인 집행을 위한 데이터 기반의 의사결정을 지원합니다.\n\n[가정하는 테이블 구조]\n- `users` 테이블: `user_id` (사용자 ID), `signup_date` (가입일), `marketing_channel` (유입 마케팅 채널명)\n- `marketing_costs` 테이블 (새롭게 가정): `channel_name` (마케팅 채널명), `cost_month` (비용 집계 월), `total_cost` (해당 월의 총 마케팅 비용)",
+    "expected_description": "지정된 기간 동안 각 마케팅 채널별 신규 가입자 수, 총 마케팅 비용, 그리고 CAC를 보여주는 테이블입니다.",
+    "expected_columns": [
+      "marketing_channel",
+      "new_signups",
+      "total_marketing_cost",
+      "cac"
+    ],
+    "sort_keys": [
+      "new_signups",
+      "cac"
+    ]
+  },
+  {
+    "problem_id": "startup_da_005_hard_cohort_revenue",
+    "difficulty": "hard",
+    "topic": "cohort",
+    "requester": "전략팀",
+    "question": "안녕하세요, 전략팀입니다. 장기적인 사업 성장을 예측하고 주요 투자 지표를 산정하기 위해 사용자 생애 가치(LTV) 분석이 필요합니다. 특히, 월별 신규 가입자 코호트별로 가입 후 3개월, 6개월, 12개월 시점의 누적 LTV를 알고 싶습니다. 지난 24개월간의 가입 코호트 데이터를 바탕으로 분석해 주세요.",
+    "context": "특정 가입 코호트의 장기적인 가치 변화를 파악하여 서비스의 지속 가능성을 평가하고, 마케팅/제품 전략 수립에 활용하고자 합니다. LTV는 '각 코호트에 속한 사용자들이 가입 시점으로부터 특정 기간(예: 3개월) 동안 발생시킨 총 결제액을 해당 코호트의 총 사용자 수로 나눈 값'으로 정의합니다.\n\n[가정하는 테이블 구조]\n- `users` 테이블: `user_id` (사용자 ID), `signup_date` (가입일)\n- `orders` 테이블: `user_id` (사용자 ID), `order_timestamp` (주문 시각), `amount` (주문 금액), `payment_status` (결제 상태, 'completed'만 유효)",
+    "expected_description": "월별 가입 코호트별로 총 가입 사용자 수, 그리고 가입 후 3개월, 6개월, 12개월 시점의 누적 LTV를 보여주는 테이블입니다.",
+    "expected_columns": [
+      "signup_cohort_month",
+      "total_cohort_users",
+      "ltv_3_months",
+      "ltv_6_months",
+      "ltv_12_months"
+    ],
+    "sort_keys": [
+      "signup_cohort_month"
+    ]
+  },
+  {
+    "problem_id": "startup_da_006_hard_segmentation_funnel",
+    "difficulty": "hard",
+    "topic": "segmentation",
+    "requester": "CX팀",
+    "question": "안녕하세요, CX팀입니다. 저희 앱에서 특정 중요한 기능 (예: '프리미엄 구독 결제')을 시작했으나 최종적으로 결제하지 않고 이탈하는 사용자들에 대한 이해가 필요합니다. 지난 한 달 동안 '프리미엄 구독 결제 시작' 이벤트는 발생했지만, 30분 이내에 '결제 완료' 이벤트가 발생하지 않은 사용자들을 '이탈 위험군'으로 정의하고자 합니다. 이 이탈 위험군 사용자들의 '결제 시작' 직전 5분간의 행동 이벤트 (최대 3개)를 분석하여 어떤 페이지를 봤고 어떤 행동을 했는지 알려주세요. 이 데이터는 이탈 방지 개선 방안 마련에 도움이 될 것입니다.",
+    "context": "고객 이탈 원인을 파악하고 선제적인 고객 지원 또는 제품 개선을 통해 이탈을 줄이고자 합니다. '프리미엄 구독 결제 시작' 이벤트와 '결제 완료' 이벤트 사이의 시간 관계가 중요합니다. 또한, '결제 시작' 이벤트는 여러 번 발생할 수 있으므로, 각 '결제 시작' 이벤트 건별로 이전 행동을 추적해야 합니다.\n\n[가정하는 테이블 구조]\n- `events` 테이블: `user_id` (사용자 ID), `event_name` (발생 이벤트명, 예: 'start_premium_subscription_checkout', 'complete_purchase', 'view_settings', 'view_faq_page'), `event_timestamp` (이벤트 발생 시각), `event_properties` (JSONB/VARCHAR 형태로, 예: 'page_url' 등의 추가 정보 포함 가능)",
+    "expected_description": "각 '이탈 위험군' 사용자의 '프리미엄 구독 결제 시작' 이벤트 발생 시각과 해당 이벤트 직전 5분 이내에 발생한 최대 3개의 이전 행동 이벤트를 보여주는 테이블입니다.",
+    "expected_columns": [
+      "user_id",
+      "checkout_start_timestamp",
+      "previous_event_1_name",
+      "previous_event_1_timestamp",
+      "previous_event_2_name",
+      "previous_event_2_timestamp",
+      "previous_event_3_name",
+      "previous_event_3_timestamp"
+    ],
+    "sort_keys": [
+      "checkout_start_timestamp",
+      "user_id"
+    ],
+    "hint": "시간 간격을 이용한 윈도우 함수 (예: LAG, INTERVAL)와 조건부 집계 (Conditional Aggregation)가 필요할 수 있습니다. 각 '결제 시작' 이벤트 건별로 이전 행동을 분석해야 합니다."
+  }
+]
