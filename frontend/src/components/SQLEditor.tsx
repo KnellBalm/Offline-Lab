@@ -79,18 +79,40 @@ export function SQLEditor({ value, onChange, onExecute, height = '200px', tables
                     suggestions.push(item);
                 };
 
-                // 키워드 목록(기존 유지)
+                // PostgreSQL 키워드 + 함수 목록 (쿼리 분석용만 유지)
                 const keywords = [
-                    'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IN', 'LIKE', 'BETWEEN',
-                    'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'OUTER JOIN',
-                    'ON', 'GROUP BY', 'HAVING', 'ORDER BY', 'ASC', 'DESC',
-                    'LIMIT', 'OFFSET', 'AS', 'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MAX', 'MIN',
+                    // SELECT 분석용 키워드
+                    'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IN', 'LIKE', 'ILIKE', 'BETWEEN',
+                    'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'FULL OUTER JOIN', 'CROSS JOIN',
+                    'ON', 'USING', 'GROUP BY', 'HAVING', 'ORDER BY', 'ASC', 'DESC', 'NULLS FIRST', 'NULLS LAST',
+                    'LIMIT', 'OFFSET', 'AS', 'DISTINCT', 'DISTINCT ON', 'ALL',
                     'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'NULL', 'IS NULL', 'IS NOT NULL',
                     'UNION', 'UNION ALL', 'EXCEPT', 'INTERSECT',
-                    'COALESCE', 'NULLIF', 'CAST', 'EXTRACT', 'DATE_TRUNC',
+                    'WITH', 'RECURSIVE', 'LATERAL',
+                    // DDL/DML 키워드 (쿼리 테스트에서는 사용 안함)
+                    // 'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM', 'RETURNING',
+                    // 'CREATE TABLE', 'ALTER TABLE', 'DROP TABLE', 'TRUNCATE',
+                    // 'CREATE INDEX', 'CREATE VIEW', 'CREATE FUNCTION',
+                    // PostgreSQL 집계 함수
+                    'COUNT', 'SUM', 'AVG', 'MAX', 'MIN', 'ARRAY_AGG', 'STRING_AGG',
+                    // PostgreSQL 윈도우 함수
                     'ROW_NUMBER', 'RANK', 'DENSE_RANK', 'NTILE', 'LAG', 'LEAD',
-                    'OVER', 'PARTITION BY', 'WITH', 'RECURSIVE'
+                    'FIRST_VALUE', 'LAST_VALUE', 'NTH_VALUE', 'OVER', 'PARTITION BY',
+                    // PostgreSQL 문자열 함수
+                    'CONCAT', 'LENGTH', 'LOWER', 'UPPER', 'TRIM', 'SUBSTRING', 'REPLACE', 'SPLIT_PART',
+                    // PostgreSQL 날짜/시간 함수
+                    'NOW', 'CURRENT_DATE', 'CURRENT_TIMESTAMP',
+                    'DATE_TRUNC', 'DATE_PART', 'EXTRACT', 'AGE', 'INTERVAL',
+                    'TO_DATE', 'TO_TIMESTAMP', 'TO_CHAR',
+                    // PostgreSQL 조건 함수
+                    'COALESCE', 'NULLIF', 'GREATEST', 'LEAST', 'CAST',
+                    // PostgreSQL 수학 함수
+                    'ABS', 'CEIL', 'FLOOR', 'ROUND', 'TRUNC', 'MOD',
+                    // PostgreSQL 연산자
+                    'EXISTS', 'NOT EXISTS', 'ANY'
                 ];
+
+
 
                 // 1) FROM/JOIN 뒤에서는 "테이블" 위주
                 if (endsWithFromJoin) {

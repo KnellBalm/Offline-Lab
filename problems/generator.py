@@ -21,6 +21,8 @@ REQUIRED_FIELDS = {
     "sort_keys",
 }
 
+GRADING_SCHEMA = "grading"
+
 def generate(today: date, pg: PostgresEngine) -> str:
     logger.info(f"start generating PA problems for {today}")
     problems = build_prompt()  # Gemini 호출
@@ -46,15 +48,50 @@ def generate(today: date, pg: PostgresEngine) -> str:
     if any(v != 2 for v in diff_cnt.values()):
         logger.warning(f"난이도 분배가 2:2:2가 아님: {diff_cnt} - 계속 진행")
 
+    # grading 스키마 생성 (없으면 생성)
+    logger.info("initializing grading schema")
+    pg.execute(f"CREATE SCHEMA IF NOT EXISTS {GRADING_SCHEMA}")
 
-    # expected 테이블 생성
-    logger.info("creating expected tables in postgres")
+    # 정답 데이터 생성 (grading 스키마에 저장 + JSON에 메타데이터 추가)
+    logger.info("creating expected data in grading schema")
     for p in problems:
-        table = f"expected_{p['problem_id']}"
+        table = f"{GRADING_SCHEMA}.expected_{p['problem_id']}"
         sql = build_expected_sql(p)
-        pg.execute(f"DROP TABLE IF EXISTS {table}")
-        pg.execute(f"CREATE TABLE {table} AS {sql}")
-    logger.info("expected tables created")
+        
+        try:
+            # grading 스키마에 테이블 생성
+            pg.execute(f"DROP TABLE IF EXISTS {table}")
+            pg.execute(f"CREATE TABLE {table} AS {sql}")
+            
+            # 메타데이터 추출 (행 수, 컬럼 정보)
+            meta_df = pg.fetch_df(f"SELECT COUNT(*) as cnt FROM {table}")
+            row_count = int(meta_df.iloc[0]["cnt"])
+            
+            col_df = pg.fetch_df(f"""
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_schema = '{GRADING_SCHEMA}' 
+                AND table_name = 'expected_{p['problem_id']}'
+                ORDER BY ordinal_position
+            """)
+            columns_info = [
+                {"name": row["column_name"], "type": row["data_type"]}
+                for _, row in col_df.iterrows()
+            ]
+            
+            # 문제 JSON에 메타데이터 추가
+            p["expected_meta"] = {
+                "row_count": row_count,
+                "columns": columns_info,
+                "grading_table": table
+            }
+            
+            logger.info(f"created {table} with {row_count} rows")
+        except Exception as e:
+            logger.warning(f"failed to create expected table for {p['problem_id']}: {e}")
+            p["expected_meta"] = {"error": str(e)}
+
+    logger.info("expected tables created in grading schema")
 
     path = PROBLEM_DIR / f"{today}.json"
     with open(path, "w", encoding="utf-8") as f:
@@ -62,3 +99,4 @@ def generate(today: date, pg: PostgresEngine) -> str:
 
     logger.info(f"saved problems to {path}")
     return str(path)
+

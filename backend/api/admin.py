@@ -1,14 +1,17 @@
 # backend/api/admin.py
 """관리자 API"""
 from datetime import date
+import json
+import os
 from fastapi import APIRouter, HTTPException
 
 from backend.schemas.admin import (
-    SystemStatus, SchedulerStatus, DatabaseTable,
+    SystemStatus, SchedulerStatus, DatabaseTable, TodayProblemsStatus,
     GenerateProblemsRequest, GenerateProblemsResponse,
     RefreshDataRequest, RefreshDataResponse
 )
 from backend.services.database import postgres_connection, duckdb_connection
+
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -78,12 +81,40 @@ async def get_system_status():
     except:
         pass
     
+    # 오늘의 문제 현황 확인
+    today = date.today()
+    problem_path = f"problems/daily/{today.isoformat()}.json"
+    today_problems = None
+    
+    try:
+        if os.path.exists(problem_path):
+            with open(problem_path, encoding="utf-8") as f:
+                problems = json.load(f)
+            
+            difficulties = {}
+            for p in problems:
+                diff = p.get("difficulty", "unknown")
+                difficulties[diff] = difficulties.get(diff, 0) + 1
+            
+            today_problems = TodayProblemsStatus(
+                exists=True,
+                count=len(problems),
+                difficulties=difficulties,
+                path=problem_path
+            )
+        else:
+            today_problems = TodayProblemsStatus(exists=False)
+    except:
+        today_problems = TodayProblemsStatus(exists=False)
+    
     return SystemStatus(
         postgres_connected=postgres_connected,
         duckdb_connected=duckdb_connected,
         tables=tables,
-        scheduler_sessions=scheduler_sessions
+        scheduler_sessions=scheduler_sessions,
+        today_problems=today_problems
     )
+
 
 
 @router.post("/generate-problems", response_model=GenerateProblemsResponse)

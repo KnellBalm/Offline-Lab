@@ -1,7 +1,7 @@
 # backend/schemas/admin.py
 """관리자 관련 스키마"""
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 
 
@@ -20,12 +20,22 @@ class DatabaseTable(BaseModel):
     column_count: int
 
 
+class TodayProblemsStatus(BaseModel):
+    """오늘의 문제 현황"""
+    exists: bool
+    count: int = 0
+    difficulties: Optional[Dict[str, int]] = None
+    path: Optional[str] = None
+
+
 class SystemStatus(BaseModel):
     """시스템 상태"""
     postgres_connected: bool
     duckdb_connected: bool
     tables: List[DatabaseTable]
     scheduler_sessions: List[SchedulerStatus]
+    today_problems: Optional[TodayProblemsStatus] = None
+
 
 
 class GenerateProblemsRequest(BaseModel):

@@ -1,6 +1,8 @@
 # grader/grader.py
 import pandas as pd
 
+GRADING_SCHEMA = "grading"
+
 class EngineError(Exception):
     def __init__(self, error_type, message):
         self.error_type = error_type
@@ -13,6 +15,10 @@ class LogicError(Exception):
 
 def grade(pg, problem, view_name="my_answer"):
     pid = problem["problem_id"]
+    
+    # expected_meta가 있으면 grading_table 사용, 없으면 기존 방식
+    expected_meta = problem.get("expected_meta", {})
+    grading_table = expected_meta.get("grading_table", f"{GRADING_SCHEMA}.expected_{pid}")
 
     try:
         user_df = pg.fetch_df(f"SELECT * FROM {view_name}")
@@ -20,9 +26,9 @@ def grade(pg, problem, view_name="my_answer"):
         raise EngineError("SQL_EXECUTION_ERROR", str(e))
 
     try:
-        expected_df = pg.fetch_df(f"SELECT * FROM expected_{pid}")
+        expected_df = pg.fetch_df(f"SELECT * FROM {grading_table}")
     except Exception as e:
-        raise EngineError("EXPECTED_TABLE_ERROR", str(e))
+        raise EngineError("EXPECTED_TABLE_ERROR", f"정답 테이블 조회 실패 ({grading_table}): {str(e)}")
 
     if list(user_df.columns) != list(expected_df.columns):
         raise LogicError(
@@ -53,3 +59,4 @@ def grade(pg, problem, view_name="my_answer"):
                 )
 
     return True
+

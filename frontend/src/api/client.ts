@@ -1,7 +1,20 @@
 // frontend/src/api/client.ts
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:15174';
+// 브라우저가 접속한 호스트를 기반으로 백엔드 URL 자동 설정
+const getApiBase = () => {
+    if (import.meta.env.VITE_API_URL) {
+        return import.meta.env.VITE_API_URL;
+    }
+    // 브라우저 환경에서는 현재 호스트 사용, 포트만 15174로 변경
+    if (typeof window !== 'undefined') {
+        return `http://${window.location.hostname}:15174`;
+    }
+    return 'http://localhost:15174';
+};
+
+const API_BASE = getApiBase();
+
 
 export const api = axios.create({
     baseURL: API_BASE,

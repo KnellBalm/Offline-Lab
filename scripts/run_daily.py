@@ -118,6 +118,9 @@ def run_scheduler():
     """스케줄러 루프 - Docker 컨테이너에서 상시 실행"""
     logger.info(f"[SCHEDULER] Starting with {RUN_INTERVAL_HOURS}h interval")
     
+    # 시작 시 데이터/문제 체크 및 초기화
+    check_and_init_on_startup()
+    
     while True:
         try:
             run_daily_pipeline()
@@ -129,5 +132,47 @@ def run_scheduler():
         time.sleep(RUN_INTERVAL_HOURS * 3600)
 
 
+def check_and_init_on_startup():
+    """시작 시 데이터/문제 체크 및 초기화"""
+    today = date.today()
+    logger.info(f"[STARTUP] Checking data and problems for {today}")
+    
+    pg = PostgresEngine(PostgresEnv().dsn())
+    
+    # 1. PA 데이터 체크
+    try:
+        df = pg.fetch_df("SELECT COUNT(*) as cnt FROM pa_users")
+        pa_count = int(df.iloc[0]["cnt"])
+        logger.info(f"[STARTUP] PA users count: {pa_count}")
+        
+        if pa_count == 0:
+            logger.info("[STARTUP] PA data missing, generating...")
+            generate_data(modes=("pa",))
+            logger.info("[STARTUP] PA data generated")
+    except Exception as e:
+        logger.warning(f"[STARTUP] PA data check failed: {e}, generating...")
+        try:
+            generate_data(modes=("pa",))
+        except Exception as e2:
+            logger.error(f"[STARTUP] PA data generation failed: {e2}")
+    
+    # 2. 오늘 문제 체크
+    problem_path = f"problems/daily/{today.isoformat()}.json"
+    if not os.path.exists(problem_path):
+        logger.info(f"[STARTUP] Today's problems missing, generating...")
+        try:
+            from problems.generator import generate as gen_problems
+            gen_problems(today, pg)
+            logger.info(f"[STARTUP] Problems generated: {problem_path}")
+        except Exception as e:
+            logger.error(f"[STARTUP] Problem generation failed: {e}")
+    else:
+        logger.info(f"[STARTUP] Today's problems exist: {problem_path}")
+    
+    pg.close()
+    logger.info("[STARTUP] Initialization complete")
+
+
 if __name__ == "__main__":
     run_scheduler()
+
