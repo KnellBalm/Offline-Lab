@@ -2,6 +2,8 @@
 
 > 프로덕트 분석가 양성을 위한 AI 기반 SQL 실습 플랫폼
 
+[↑ 목차로](#목차)
+
 ---
 
 ## 목차
@@ -26,6 +28,8 @@
 8. [분석 가이드](#8-분석-가이드)
 9. [관련 문서](#9-관련-문서)
 10. [로드맵](#10-로드맵)
+
+[↑ 목차로](#목차)
 
 ---
 
@@ -54,6 +58,8 @@
 - **AI 피드백** 활용 → 시니어 분석가 코드리뷰 효과
 - **실제 데이터 패턴** 경험 → 면접/과제에 즉시 적용 가능
 
+[↑ 목차로](#목차)
+
 ---
 
 ## 2. 주요 기능
@@ -78,6 +84,8 @@
 | SaaS | B2B 소프트웨어 | 13개 | 활성화, 기능 사용률 |
 | 커뮤니티 | 소셜 네트워크 | 11개 | 창작자/소비자 비율 |
 | 핀테크 | 금융 서비스 | 12개 | 거래 성공률, KYC |
+
+[↑ 목차로](#목차)
 
 ---
 
@@ -161,6 +169,8 @@
 | 저장소 패턴 | Engine 클래스 | DB 접근 추상화 |
 | 서비스 레이어 | Generator, Grader | 비즈니스 로직 캡슐화 |
 
+[↑ 목차로](#목차)
+
 ---
 
 ## 4. 기술 스택
@@ -202,6 +212,8 @@
 | Docker Compose | 컨테이너 오케스트레이션 |
 | PostgreSQL | 메인 데이터베이스 |
 | DuckDB | 분석용 데이터베이스 |
+
+[↑ 목차로](#목차)
 
 ---
 
@@ -255,6 +267,8 @@ gen_pa(date.today(), pg)
 pg.close()
 "
 ```
+
+[↑ 목차로](#목차)
 
 ---
 
@@ -336,6 +350,8 @@ pg.close()
 | 정답률 | 정답 수 / 총 제출 수 | > 60% |
 | 세션당 문제 수 | 평균 시도 문제 | > 2 |
 | D1 리텐션 | 다음날 재방문율 | > 30% |
+
+[↑ 목차로](#목차)
 
 ---
 
@@ -523,6 +539,8 @@ PRODUCT_TYPE_CONTEXTS["gaming"] = {
 }
 ```
 
+[↑ 목차로](#목차)
+
 ---
 
 ## 8. 분석 가이드
@@ -632,6 +650,8 @@ stream_daily_metrics (
 | `bundle_view` | 번들 상품 조회 |
 | `notification_open` | 알림 열기 |
 
+[↑ 목차로](#목차)
+
 ---
 
 ## 9. 관련 문서
@@ -641,6 +661,8 @@ stream_daily_metrics (
 | 이벤트 트래킹 가이드 | [docs/EVENT_TRACKING_GUIDE.md](./docs/EVENT_TRACKING_GUIDE.md) | 구현 가이드 |
 | 이벤트 설계 가이드라인 | [docs/EVENT_DESIGN_GUIDELINE.md](./docs/EVENT_DESIGN_GUIDELINE.md) | 설계 명세 |
 | API 문서 | http://localhost:8000/docs | Swagger UI |
+
+[↑ 목차로](#목차)
 
 ---
 
@@ -665,11 +687,15 @@ stream_daily_metrics (
 - [ ] 학습 커리큘럼
 - [ ] 수료증 발급
 
+[↑ 목차로](#목차)
+
 ---
 
 ## 라이선스
 
 Internal Use Only
+
+[↑ 목차로](#목차)
 
 ---
 
@@ -680,6 +706,8 @@ Internal Use Only
 3. 변경사항 커밋 (`git commit -m 'Add some amazing feature'`)
 4. 브랜치 푸시 (`git push origin feature/amazing-feature`)
 5. Pull Request 생성
+
+[↑ 목차로](#목차)
 
 ---
 
