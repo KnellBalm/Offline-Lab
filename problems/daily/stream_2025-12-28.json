@@ -1,0 +1,129 @@
+[
+  {
+    "problem_id": "stream_sql_001",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "마케팅 팀",
+    "question": "2025년 6월부터 12월까지의 일별 총 매출액을 조회해주세요. 각 날짜별 매출액과 함께 해당 날짜의 총 구매 건수를 포함하여 보여주세요.",
+    "context": "마케팅 캠페인 성과 분석을 위해 일별 매출 및 구매 데이터 추이를 파악하고자 합니다. 2025년 하반기 전체 기간에 대한 데이터를 제공해주세요.",
+    "submission_requirements": "결과는 'date' (날짜), 'total_revenue' (총 매출액), 'total_purchases' (총 구매 건수) 컬럼으로 구성되어야 합니다. 날짜 순서대로 정렬해주세요.",
+    "answer_sql": "SELECT\n    date,\n    revenue AS total_revenue,\n    purchases AS total_purchases\nFROM\n    stream_daily_metrics\nWHERE\n    date BETWEEN '2025-06-01' AND '2025-12-31'\nORDER BY\n    date ASC;",
+    "expected_columns": [
+      "date",
+      "total_revenue",
+      "total_purchases"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "hint": null,
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_001"
+    }
+  },
+  {
+    "problem_id": "stream_sql_002",
+    "difficulty": "easy",
+    "topic": "dau",
+    "requester": "데이터 분석 팀",
+    "question": "2025년 11월 15일의 일일 활성 사용자 수 (DAU)를 계산해주세요. DAU는 해당 날짜에 이벤트가 발생한 고유 사용자 수입니다.",
+    "context": "특정 날짜의 사용자 활동량을 파악하기 위해 DAU 지표가 필요합니다. 2025년 11월 15일의 DAU 값을 알려주세요.",
+    "submission_requirements": "결과는 'dau_count'라는 하나의 컬럼으로 구성되어야 하며, 해당 날짜의 고유 사용자 수를 나타내야 합니다.",
+    "answer_sql": "SELECT\n    COUNT(DISTINCT user_id) AS dau_count\nFROM\n    stream_events\nWHERE\n    event_time::DATE = '2025-11-15';",
+    "expected_columns": [
+      "dau_count"
+    ],
+    "sort_keys": [],
+    "hint": "user_id의 DISTINCT를 사용하여 고유 사용자 수를 계산합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_002"
+    }
+  },
+  {
+    "problem_id": "stream_sql_003",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "퍼포먼스 마케팅 팀",
+    "question": "제품 조회 (view_product) 후 장바구니 담기 (add_to_cart), 장바구니 담기 후 구매 완료 (purchase)까지의 퍼널 전환율을 계산해주세요. 각 단계별 사용자 수를 포함해주세요.",
+    "context": "사용자 여정에서 병목 구간을 파악하고 최적화 방안을 모색하기 위해 핵심 퍼널 전환율을 분석하고자 합니다. 2025년 6월 15일부터 12월 18일 데이터 전체를 대상으로 합니다.",
+    "submission_requirements": "결과는 'step' (퍼널 단계), 'user_count' (해당 단계 사용자 수), 'conversion_rate' (이전 단계 대비 전환율) 컬럼으로 구성되어야 합니다. 각 단계는 'view_product', 'add_to_cart', 'purchase' 순서로 정렬해주세요.",
+    "answer_sql": "WITH funnel_steps AS (\n    SELECT\n        'view_product' AS step,\n        COUNT(DISTINCT user_id) AS user_count\n    FROM\n        stream_events\n    WHERE\n        event_name = 'view_product'\n\n    UNION ALL\n\n    SELECT\n        'add_to_cart' AS step,\n        COUNT(DISTINCT user_id) AS user_count\n    FROM\n        stream_events\n    WHERE\n        event_name = 'add_to_cart'\n        AND user_id IN (\n            SELECT DISTINCT user_id\n            FROM stream_events\n            WHERE event_name = 'view_product'\n        )\n\n    UNION ALL\n\n    SELECT\n        'purchase' AS step,\n        COUNT(DISTINCT user_id) AS user_count\n    FROM\n        stream_events\n    WHERE\n        event_name = 'purchase'\n        AND user_id IN (\n            SELECT DISTINCT user_id\n            FROM stream_events\n            WHERE event_name = 'add_to_cart'\n        )\n),\n\nfunnel_with_previous AS (\n    SELECT\n        step,\n        user_count,\n        LAG(user_count, 1, user_count) OVER (ORDER BY CASE WHEN step = 'view_product' THEN 1 WHEN step = 'add_to_cart' THEN 2 WHEN step = 'purchase' THEN 3 END) AS previous_step_user_count\n    FROM\n        funnel_steps\n)\n\nSELECT\n    step,\n    user_count,\n    CASE\n        WHEN previous_step_user_count = 0 THEN 0\n        ELSE ROUND((user_count::NUMERIC / previous_step_user_count) * 100, 2)\n    END AS conversion_rate\nFROM\n    funnel_with_previous\nORDER BY\n    CASE WHEN step = 'view_product' THEN 1 WHEN step = 'add_to_cart' THEN 2 WHEN step = 'purchase' THEN 3 END;",
+    "expected_columns": [
+      "step",
+      "user_count",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "step"
+    ],
+    "hint": "CTE를 사용하여 각 퍼널 단계별 사용자 수를 계산하고, LAG 함수를 활용하여 이전 단계 사용자 수를 가져와 전환율을 계산합니다. 'purchase' 단계는 'add_to_cart' 단계에 속한 사용자 중에서만 계산해야 합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_003"
+    }
+  },
+  {
+    "problem_id": "stream_sql_004",
+    "difficulty": "medium",
+    "topic": "channel",
+    "requester": "채널 관리 팀",
+    "question": "각 채널별 (channel) 총 매출액과 총 구매 건수를 계산해주세요. 2025년 6월 15일부터 12월 18일 데이터까지를 대상으로 합니다.",
+    "context": "다양한 채널의 성과를 비교하고 집중해야 할 채널을 파악하기 위해 각 채널별 매출 및 구매 기여도를 분석하고자 합니다. 전체 데이터 기간에 대한 집계 결과를 요청합니다.",
+    "submission_requirements": "결과는 'channel' (채널명), 'total_revenue' (총 매출액), 'total_purchases' (총 구매 건수) 컬럼으로 구성되어야 합니다. 총 매출액이 높은 순서대로 정렬해주세요.",
+    "answer_sql": "SELECT\n    se.channel,\n    SUM(sdm.revenue) AS total_revenue,\n    SUM(sdm.purchases) AS total_purchases\nFROM\n    stream_events se\nJOIN\n    stream_daily_metrics sdm ON se.event_time::DATE = sdm.date\nWHERE\n    se.event_time BETWEEN '2025-06-15 00:00:00' AND '2025-12-18 23:59:59'\nGROUP BY\n    se.channel\nORDER BY\n    total_revenue DESC;",
+    "expected_columns": [
+      "channel",
+      "total_revenue",
+      "total_purchases"
+    ],
+    "sort_keys": [
+      "total_revenue"
+    ],
+    "hint": "stream_events와 stream_daily_metrics 테이블을 event_time의 날짜와 date 컬럼으로 JOIN하여 채널별 매출 및 구매를 집계합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_004"
+    }
+  },
+  {
+    "problem_id": "stream_sql_005",
+    "difficulty": "hard",
+    "topic": "device",
+    "requester": "UI/UX 팀",
+    "question": "각 디바이스 (device)별로 'visit' 이벤트 발생 후 'purchase' 이벤트까지의 전환율을 계산해주세요. 2025년 6월 15일부터 12월 18일 데이터까지를 대상으로 합니다. 'visit' 이벤트만 발생하고 'purchase' 이벤트가 발생하지 않은 사용자도 전환율 계산 시 고려해야 합니다. (참고: 'visit' 후 'purchase'로 이어진 경우만 카운트)",
+    "context": "디바이스별 사용자 경험 차이를 파악하고, 모바일 및 데스크톱 등 각 디바이스에 최적화된 경험을 제공하기 위해 전환율을 비교 분석하고자 합니다. 2025년 하반기 전체 데이터에서 'visit'에서 'purchase'로 이어지는 전환율을 디바이스별로 조회해주세요.",
+    "submission_requirements": "결과는 'device' (디바이스 종류), 'visit_users' (visit 이벤트 발생 사용자 수), 'purchase_users' (visit 후 purchase 이벤트 발생 사용자 수), 'conversion_rate' (전환율) 컬럼으로 구성되어야 합니다. 전환율이 높은 순서대로 정렬해주세요.",
+    "answer_sql": "WITH device_visit AS (\n    SELECT\n        device,\n        COUNT(DISTINCT user_id) AS visit_users\n    FROM\n        stream_events\n    WHERE\n        event_name = 'visit'\n        AND event_time BETWEEN '2025-06-15 00:00:00' AND '2025-12-18 23:59:59'\n    GROUP BY\n        device\n),\n\ndevice_purchase AS (\n    SELECT\n        se.device,\n        COUNT(DISTINCT se.user_id) AS purchase_users\n    FROM\n        stream_events se\n    WHERE\n        se.event_name = 'purchase'\n        AND se.user_id IN (\n            SELECT DISTINCT user_id\n            FROM stream_events\n            WHERE event_name = 'visit'\n              AND event_time BETWEEN '2025-06-15 00:00:00' AND '2025-12-18 23:59:59'\n        )\n        AND se.event_time BETWEEN '2025-06-15 00:00:00' AND '2025-12-18 23:59:59'\n    GROUP BY\n        se.device\n)\n\nSELECT\n    dv.device,\n    dv.visit_users,\n    COALESCE(dp.purchase_users, 0) AS purchase_users,\n    CASE\n        WHEN dv.visit_users = 0 THEN 0\n        ELSE ROUND((COALESCE(dp.purchase_users, 0)::NUMERIC / dv.visit_users) * 100, 2)\n    END AS conversion_rate\nFROM\n    device_visit dv\nLEFT JOIN\n    device_purchase dp ON dv.device = dp.device\nORDER BY\n    conversion_rate DESC;",
+    "expected_columns": [
+      "device",
+      "visit_users",
+      "purchase_users",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "conversion_rate"
+    ],
+    "hint": "먼저 각 디바이스별 'visit' 이벤트 발생 사용자를 계산하는 CTE를 만듭니다. 그 다음, 'visit' 이력이 있는 사용자 중에서 'purchase' 이벤트가 발생한 사용자를 디바이스별로 계산하는 CTE를 만듭니다. 마지막으로 두 CTE를 LEFT JOIN하여 최종 전환율을 계산합니다. COALESCE 함수를 사용하여 purchase_users가 없는 경우 0으로 처리합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_005"
+    }
+  },
+  {
+    "problem_id": "stream_sql_006",
+    "difficulty": "hard",
+    "topic": "funnel",
+    "requester": "제품 분석 팀",
+    "question": "2025년 11월 동안 'add_to_cart' 이벤트 발생 사용자 중, 해당 세션 (session_id) 내에서 'purchase' 이벤트까지 완료한 사용자의 비율을 계산해주세요. 이는 '장바구니 포기율'을 파악하는 데 도움이 됩니다. (주의: 동일 세션 내에서 'add_to_cart'와 'purchase'가 모두 발생해야 합니다.)",
+    "context": "장바구니 단계에서의 이탈을 줄이기 위해, 사용자들이 장바구니에 상품을 담은 후 얼마나 많은 세션에서 구매까지 완료하는지 파악하고자 합니다. 2025년 11월 한 달간의 데이터를 분석해주세요.",
+    "submission_requirements": "결과는 'session_with_add_to_cart' (장바구니 담기 이벤트가 발생한 세션 수), 'session_completed_purchase' (장바구니 담기 후 해당 세션 내 구매 완료한 세션 수), 'cart_abandonment_rate' (장바구니 포기율) 컬럼으로 구성되어야 합니다. cart_abandonment_rate는 (1 - (session_completed_purchase / session_with_add_to_cart)) * 100 형태로 계산해주세요.",
+    "answer_sql": "WITH session_events AS (\n    SELECT\n        session_id,\n        MAX(CASE WHEN event_name = 'add_to_cart' THEN 1 ELSE 0 END) AS has_add_to_cart,\n        MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) AS has_purchase\n    FROM\n        stream_events\n    WHERE\n        event_time BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59'\n    GROUP BY\n        session_id\n),\n\nsession_summary AS (\n    SELECT\n        COUNT(CASE WHEN has_add_to_cart = 1 THEN 1 END) AS session_with_add_to_cart,\n        COUNT(CASE WHEN has_add_to_cart = 1 AND has_purchase = 1 THEN 1 END) AS session_completed_purchase\n    FROM\n        session_events\n)\n\nSELECT\n    session_with_add_to_cart,\n    session_completed_purchase,\n    CASE\n        WHEN session_with_add_to_cart = 0 THEN 0\n        ELSE ROUND((1 - (session_completed_purchase::NUMERIC / session_with_add_to_cart)) * 100, 2)\n    END AS cart_abandonment_rate\nFROM\n    session_summary;",
+    "expected_columns": [
+      "session_with_add_to_cart",
+      "session_completed_purchase",
+      "cart_abandonment_rate"
+    ],
+    "sort_keys": [],
+    "hint": "세션별로 'add_to_cart'와 'purchase' 이벤트 발생 여부를 나타내는 플래그를 생성합니다. 이후 세션 단위로 집계하여 장바구니 담기 세션 수와 구매 완료 세션 수를 계산하고, 이를 바탕으로 장바구니 포기율을 계산합니다. WHERE 절에 명확한 날짜 범위를 지정해주세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_006"
+    }
+  }
+]

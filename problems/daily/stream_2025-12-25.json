@@ -1,0 +1,129 @@
+[
+  {
+    "problem_id": "stream_sql_001",
+    "difficulty": "easy",
+    "topic": "dau",
+    "requester": "프로덕트팀",
+    "question": "안녕하세요. 2025년 11월 한 달간의 일별 활성 사용자 수(DAU) 데이터가 필요합니다. 앱 개선 후 사용자 접속 현황을 파악하고 싶습니다. 추출 부탁드립니다.",
+    "context": "11월 초에 배포된 앱 성능 개선 업데이트가 사용자 활동성에 긍정적인 영향을 미쳤는지 확인하기 위해, 일별 순수 방문자 수의 변화 추이를 분석하고자 합니다.",
+    "submission_requirements": "컬럼은 `date`, `dau`로 지정해주세요. 날짜(date) 기준 오름차순으로 정렬하여 제출해주세요.",
+    "answer_sql": "SELECT\n    DATE(event_time) AS date,\n    COUNT(DISTINCT user_id) AS dau\nFROM\n    stream_events\nWHERE\n    event_time >= '2025-11-01' AND event_time < '2025-12-01'\nGROUP BY\n    1\nORDER BY\n    1 ASC;",
+    "expected_columns": [
+      "date",
+      "dau"
+    ],
+    "sort_keys": [
+      "date ASC"
+    ],
+    "hint": "COUNT(DISTINCT ...) 함수로 유니크한 사용자 수를 계산하고, DATE() 함수를 사용하여 TIMESTAMP를 날짜 형식으로 변환 후 그룹화하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_001"
+    }
+  },
+  {
+    "problem_id": "stream_sql_002",
+    "difficulty": "easy",
+    "topic": "channel",
+    "requester": "마케팅팀",
+    "question": "2025년 4분기(10월~12월) 동안 각 채널을 통해 유입된 순수 사용자(Unique Users) 수를 확인하고 싶습니다. 채널별 성과 비교 자료로 활용할 예정입니다.",
+    "context": "4분기에 집행한 채널별 마케팅 캠페인의 성과를 측정하기 위해, 어떤 채널이 가장 많은 사용자를 유입시켰는지 파악해야 합니다.",
+    "submission_requirements": "컬럼은 `channel`, `unique_users`로 지정하고, 순수 사용자 수(unique_users)가 많은 순서로 내림차순 정렬해주세요.",
+    "answer_sql": "SELECT\n    channel,\n    COUNT(DISTINCT user_id) AS unique_users\nFROM\n    stream_events\nWHERE\n    event_time >= '2025-10-01' AND event_time < '2026-01-01'\nGROUP BY\n    1\nORDER BY\n    2 DESC;",
+    "expected_columns": [
+      "channel",
+      "unique_users"
+    ],
+    "sort_keys": [
+      "unique_users DESC"
+    ],
+    "hint": "특정 기간을 필터링한 후, channel을 기준으로 그룹화하여 중복을 제외한 사용자 수를 세어야 합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_002"
+    }
+  },
+  {
+    "problem_id": "stream_sql_003",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "그로스해킹팀",
+    "question": "2025년 11월 기준으로, 'visit' -> 'view_product' -> 'add_to_cart' -> 'purchase'로 이어지는 핵심 퍼널의 각 단계별 유저 수를 집계해주세요.",
+    "context": "사용자들이 서비스의 핵심 플로우 중 어떤 단계에서 가장 많이 이탈하는지 파악하여, 전환율이 낮은 구간을 집중적으로 개선하고자 합니다. 한 명의 유저가 여러 단계를 거쳤다면 각 단계에 모두 포함되어야 합니다.",
+    "submission_requirements": "컬럼은 `funnel_stage`, `user_count`로 지정해주세요. 퍼널 순서(visit, view_product, add_to_cart, purchase)에 맞게 결과가 나오도록 정렬해주세요.",
+    "answer_sql": "SELECT\n    event_name AS funnel_stage,\n    COUNT(DISTINCT user_id) AS user_count\nFROM\n    stream_events\nWHERE\n    event_time >= '2025-11-01' AND event_time < '2025-12-01'\n    AND event_name IN ('visit', 'view_product', 'add_to_cart', 'purchase')\nGROUP BY\n    event_name\nORDER BY\n    CASE event_name\n        WHEN 'visit' THEN 1\n        WHEN 'view_product' THEN 2\n        WHEN 'add_to_cart' THEN 3\n        WHEN 'purchase' THEN 4\n    END;",
+    "expected_columns": [
+      "funnel_stage",
+      "user_count"
+    ],
+    "sort_keys": [
+      "funnel order (visit -> view_product -> add_to_cart -> purchase)"
+    ],
+    "hint": "IN 절을 사용하여 특정 이벤트만 필터링한 후, event_name으로 그룹화하여 사용자 수를 계산할 수 있습니다. ORDER BY 절에서 CASE WHEN을 사용하면 원하는 순서로 정렬할 수 있습니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_003"
+    }
+  },
+  {
+    "problem_id": "stream_sql_004",
+    "difficulty": "medium",
+    "topic": "revenue",
+    "requester": "사업기획팀",
+    "question": "연말 프로모션 기획을 위해, 2025년 10월 1일부터 11월 30일까지의 주차별 매출(revenue)과 총 구매 건수(purchases)를 집계 부탁드립니다. 주차의 시작은 월요일로 간주합니다.",
+    "context": "과거 실적을 기반으로 올해 연말 프로모션의 목표치를 설정하고, 주차별 성과를 예측하기 위해 10-11월의 주간 매출 및 구매 트렌드 데이터가 필요합니다.",
+    "submission_requirements": "컬럼은 `week_start_date`, `weekly_revenue`, `weekly_purchases`로 지정해주세요. 주차 시작일(week_start_date) 기준 오름차순으로 정렬해주세요.",
+    "answer_sql": "SELECT\n    DATE_TRUNC('week', date)::DATE AS week_start_date,\n    SUM(revenue) AS weekly_revenue,\n    SUM(purchases) AS weekly_purchases\nFROM\n    stream_daily_metrics\nWHERE\n    date >= '2025-10-01' AND date <= '2025-11-30'\nGROUP BY\n    1\nORDER BY\n    1 ASC;",
+    "expected_columns": [
+      "week_start_date",
+      "weekly_revenue",
+      "weekly_purchases"
+    ],
+    "sort_keys": [
+      "week_start_date ASC"
+    ],
+    "hint": "DATE_TRUNC('week', ...) 함수는 날짜를 해당 주의 시작일(월요일)로 통일시켜 줍니다. 이 값을 기준으로 그룹화하여 주차별 합계를 구하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_004"
+    }
+  },
+  {
+    "problem_id": "stream_sql_005",
+    "difficulty": "hard",
+    "topic": "device",
+    "requester": "UX/UI팀",
+    "question": "2025년 3분기(7월~9월) 동안, 디바이스(PC, Mobile)별 구매 전환율을 계산하여 주십시오. 디바이스별 사용자 경험 개선 우선순위를 정하는 데 사용될 예정입니다.",
+    "context": "모바일과 PC 환경의 사용자 경험(UX) 차이가 실제 구매 전환에 어떤 영향을 미치는지 데이터를 통해 확인하고자 합니다. 여기서 구매 전환율은 '(해당 디바이스에서 한 번이라도 구매한 유저 수 / 해당 디바이스로 방문한 전체 유저 수) * 100'으로 정의합니다.",
+    "submission_requirements": "컬럼은 `device`, `conversion_rate`로 지정해주세요. 전환율(conversion_rate)은 소수점 둘째 자리까지 반올림해주세요. 디바이스(device) 이름 오름차순으로 정렬해주세요.",
+    "answer_sql": "WITH device_users AS (\n    SELECT\n        device,\n        user_id,\n        MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) as purchased\n    FROM\n        stream_events\n    WHERE\n        event_time >= '2025-07-01' AND event_time < '2025-10-01'\n    GROUP BY\n        device, user_id\n)\nSELECT\n    device,\n    ROUND(\n        (SUM(purchased)::DECIMAL / COUNT(user_id) * 100), 2\n    ) AS conversion_rate\nFROM\n    device_users\nGROUP BY\n    device\nORDER BY\n    device ASC;",
+    "expected_columns": [
+      "device",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "device ASC"
+    ],
+    "hint": "먼저 WITH절을 사용하여 디바이스와 유저 단위로 구매 여부를 (0 또는 1로) 식별하는 임시 테이블을 만드세요. 그 다음, 이 임시 테이블을 디바이스별로 그룹화하여 구매자 수의 합과 전체 유저 수를 구해 전환율을 계산할 수 있습니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_005"
+    }
+  },
+  {
+    "problem_id": "stream_sql_006",
+    "difficulty": "hard",
+    "topic": "channel",
+    "requester": "퍼포먼스 마케팅팀",
+    "question": "2025년 11월에 첫 구매를 한 고객들이, 그들의 '첫 구매 당일'에 가장 먼저 접속한 채널이 무엇인지 궁금합니다. 채널별 신규 구매자 수를 집계해주세요.",
+    "context": "신규 고객을 최종 구매로 전환시키는 데 가장 효과적인 '첫 터치 포인트' 채널을 파악하여 광고 예산을 효율적으로 재분배하고자 합니다. 분석 대상은 11월에 서비스를 처음 구매한 유저로 한정합니다.",
+    "submission_requirements": "컬럼은 `first_touch_channel`, `new_purchaser_count`로 지정해주세요. 신규 구매자 수(new_purchaser_count) 기준 내림차순으로 정렬해주세요.",
+    "answer_sql": "WITH first_purchase_date AS (\n    SELECT\n        user_id,\n        MIN(event_time) AS first_purchase_time\n    FROM\n        stream_events\n    WHERE\n        event_time >= '2025-11-01' AND event_time < '2025-12-01'\n        AND event_name = 'purchase'\n    GROUP BY\n        user_id\n),\nfirst_touch_on_purchase_day AS (\n    SELECT\n        e.user_id,\n        e.channel,\n        ROW_NUMBER() OVER(PARTITION BY e.user_id ORDER BY e.event_time ASC) as rn\n    FROM\n        stream_events e\n    JOIN\n        first_purchase_date fpd\n    ON\n        e.user_id = fpd.user_id\n        AND DATE(e.event_time) = DATE(fpd.first_purchase_time)\n)\nSELECT\n    channel AS first_touch_channel,\n    COUNT(user_id) AS new_purchaser_count\nFROM\n    first_touch_on_purchase_day\nWHERE\n    rn = 1\nGROUP BY\n    channel\nORDER BY\n    new_purchaser_count DESC;",
+    "expected_columns": [
+      "first_touch_channel",
+      "new_purchaser_count"
+    ],
+    "sort_keys": [
+      "new_purchaser_count DESC"
+    ],
+    "hint": "WITH절을 두 번 사용하여 문제를 단계적으로 해결하세요. 첫 번째 CTE에서 유저별 '11월 첫 구매 시점'을 찾고, 두 번째 CTE에서 해당 유저들이 '첫 구매일'에 겪은 이벤트들에 ROW_NUMBER()로 순번을 매겨 첫 번째 채널을 식별할 수 있습니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_006"
+    }
+  }
+]

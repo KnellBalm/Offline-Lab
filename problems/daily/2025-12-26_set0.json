@@ -1,0 +1,197 @@
+[
+  {
+    "problem_id": "startup_sql_001_set0",
+    "difficulty": "easy",
+    "topic": "activation",
+    "requester": "그로스팀",
+    "question": "그로스팀입니다. 신규 가입자들의 온보딩 완료율을 측정하고 싶습니다. 2025년 11월에 가입한 사용자 중 'onboarding_complete' 이벤트를 발생시킨 사용자의 수를 알려주세요. 결과는 사용자 ID와 온보딩 완료 시각을 포함해야 합니다.",
+    "context": "신규 사용자의 초기 경험을 개선하기 위해 온보딩 프로세스의 효율성을 파악하는 것이 중요합니다. 특히, 특정 기간 동안 온보딩을 완료한 사용자를 식별하여 추가적인 분석의 기반을 마련하고자 합니다.",
+    "submission_requirements": "결과는 user_id, event_time 컬럼을 포함하며, event_time 기준 내림차순으로 정렬해주세요. 온보딩 완료 시각은 YYYY-MM-DD HH:MI:SS 형식으로 표시해주세요.",
+    "answer_sql": "SELECT\n    user_id,\n    event_time\nFROM\n    pa_events\nWHERE\n    event_name = 'onboarding_complete'\n    AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59'\nORDER BY\n    event_time DESC;",
+    "expected_description": "2025년 11월에 온보딩을 완료한 사용자의 user_id와 온보딩 완료 시각을 나타냅니다.",
+    "expected_columns": [
+      "user_id",
+      "event_time"
+    ],
+    "sort_keys": [
+      "event_time"
+    ],
+    "hint": "pa_events 테이블에서 event_name이 'onboarding_complete'인 데이터를 필터링하고, event_time을 사용하여 원하는 기간을 지정하세요.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 21861,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "event_time",
+          "type": "timestamp without time zone"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_001_set0"
+    }
+  },
+  {
+    "problem_id": "startup_sql_002_set0",
+    "difficulty": "easy",
+    "topic": "engagement",
+    "requester": "PM팀",
+    "question": "PM팀입니다. 지난주 (2025-12-16 ~ 2025-12-22)에 'feature_use' 이벤트를 가장 많이 발생시킨 상위 5개 국가를 알려주세요. 각 국가별 'feature_use' 이벤트 총 발생 횟수를 함께 보고해주세요.",
+    "context": "어떤 국가의 사용자들이 우리 플랫폼의 핵심 기능 사용에 가장 적극적인지 파악하여, 해당 국가에 대한 마케팅 전략 수립 및 기능 개선에 활용하고자 합니다.",
+    "submission_requirements": "결과는 country, feature_use_count 컬럼을 포함하며, feature_use_count 기준으로 내림차순 정렬해야 합니다. 상위 5개 국가만 표시해주세요. feature_use_count는 정수형이어야 합니다.",
+    "answer_sql": "SELECT\n    pu.country,\n    COUNT(pe.event_id) AS feature_use_count\nFROM\n    pa_events pe\nJOIN\n    pa_users pu ON pe.user_id = pu.user_id\nWHERE\n    pe.event_name = 'feature_use'\n    AND pe.event_time BETWEEN '2025-12-16 00:00:00' AND '2025-12-22 23:59:59'\nGROUP BY\n    pu.country\nORDER BY\n    feature_use_count DESC\nLIMIT 5;",
+    "expected_description": "2025년 12월 3주차에 'feature_use' 이벤트를 가장 많이 발생시킨 상위 5개 국가와 각 국가별 총 이벤트 발생 횟수를 보여줍니다.",
+    "expected_columns": [
+      "country",
+      "feature_use_count"
+    ],
+    "sort_keys": [
+      "feature_use_count"
+    ],
+    "hint": "pa_events와 pa_users 테이블을 user_id로 조인하고, event_name이 'feature_use'인 이벤트를 필터링하세요. event_time으로 기간을 지정하고, country별로 그룹화하여 COUNT 집계 후 상위 5개를 LIMIT으로 가져오세요.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 5,
+      "columns": [
+        {
+          "name": "country",
+          "type": "text"
+        },
+        {
+          "name": "feature_use_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_002_set0"
+    }
+  },
+  {
+    "problem_id": "startup_sql_003_set0",
+    "difficulty": "medium",
+    "topic": "activation",
+    "requester": "그로스팀",
+    "question": "그로스팀입니다. 'Activated User'를 'onboarding_complete' 이벤트 후 3일 이내에 'feature_use' 이벤트를 3회 이상 발생시킨 사용자로 정의하고 싶습니다. 2025년 10월에 가입한 사용자 중 'Activated User'에 해당하는 사용자의 수를 계산해주세요.",
+    "context": "사용자 활성화(Activation)는 플랫폼의 장기적인 성공을 위한 핵심 지표입니다. 명확한 정의를 통해 활성화된 사용자 그룹을 식별하고, 그들의 행동 패턴을 분석하여 활성화율을 높이는 전략을 수립하고자 합니다.",
+    "submission_requirements": "결과는 total_activated_users 컬럼 하나만을 포함하며, 정수형이어야 합니다. 결과는 단 하나의 행으로 반환되어야 합니다.",
+    "answer_sql": "WITH onboarding_completed_users AS (\n    SELECT\n        user_id,\n        MIN(event_time) AS onboarding_complete_time\n    FROM\n        pa_events\n    WHERE\n        event_name = 'onboarding_complete'\n        AND event_time BETWEEN '2025-10-01 00:00:00' AND '2025-10-31 23:59:59'\n    GROUP BY\n        user_id\n),\nactivated_users AS (\n    SELECT\n        pe.user_id\n    FROM\n        pa_events pe\n    JOIN\n        onboarding_completed_users ocu ON pe.user_id = ocu.user_id\n    WHERE\n        pe.event_name = 'feature_use'\n        AND pe.event_time > ocu.onboarding_complete_time\n        AND pe.event_time <= ocu.onboarding_complete_time + INTERVAL '3 days'\n    GROUP BY\n        pe.user_id\n    HAVING\n        COUNT(pe.event_id) >= 3\n)\nSELECT\n    COUNT(DISTINCT au.user_id) AS total_activated_users\nFROM\n    activated_users au\nJOIN\n    pa_users pu ON au.user_id = pu.user_id\nWHERE\n    pu.signup_at BETWEEN '2025-10-01 00:00:00' AND '2025-10-31 23:59:59';",
+    "expected_description": "2025년 10월에 가입한 사용자 중, 온보딩 완료 후 3일 이내에 3회 이상의 'feature_use' 이벤트를 발생시킨 활성화된 사용자 수를 나타냅니다.",
+    "expected_columns": [
+      "total_activated_users"
+    ],
+    "sort_keys": [],
+    "hint": "먼저 온보딩 완료 시점을 기록하는 CTE를 만들고, 해당 사용자들의 3일 이내 'feature_use' 횟수를 집계하여 3회 이상인 사용자를 식별하는 CTE를 만드세요. 마지막으로 초기 가입 기간 조건과 함께 최종 활성화 사용자 수를 계산하세요. 날짜 간격 계산에 INTERVAL을 사용하고, GROUP BY와 HAVING 절을 활용하세요.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "total_activated_users",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_003_set0"
+    }
+  },
+  {
+    "problem_id": "startup_sql_004_set0",
+    "difficulty": "medium",
+    "topic": "engagement",
+    "requester": "PM팀",
+    "question": "PM팀입니다. 2025년 12월에 'create_project' 이벤트를 1회 이상 발생시킨 사용자들의 평균 세션 수를 계산해주세요. 이 사용자들은 'upgrade_plan' 이벤트를 경험한 적이 없는 사용자여야 합니다.",
+    "context": "핵심 기능 사용률과 유료 전환 간의 관계를 이해하는 것은 서비스 성장 전략에 중요합니다. 'create_project'와 같이 중요한 행동을 한 사용자 중 아직 업그레이드하지 않은 그룹의 행동 패턴을 분석하여 업그레이드 유도 전략의 단서를 찾고자 합니다.",
+    "submission_requirements": "결과는 average_sessions_per_user 컬럼 하나만을 포함하며, 소수점 둘째 자리까지 반올림하여 표시해주세요. 결과는 단 하나의 행으로 반환되어야 합니다.",
+    "answer_sql": "WITH users_created_project AS (\n    SELECT DISTINCT\n        user_id\n    FROM\n        pa_events\n    WHERE\n        event_name = 'create_project'\n        AND event_time BETWEEN '2025-12-01 00:00:00' AND '2025-12-31 23:59:59'\n),\nusers_upgraded_plan AS (\n    SELECT DISTINCT\n        user_id\n    FROM\n        pa_events\n    WHERE\n        event_name = 'upgrade_plan'\n),\nrelevant_users AS (\n    SELECT\n        ucp.user_id\n    FROM\n        users_created_project ucp\n    LEFT JOIN\n        users_upgraded_plan uup ON ucp.user_id = uup.user_id\n    WHERE\n        uup.user_id IS NULL\n),\nuser_session_counts AS (\n    SELECT\n        user_id,\n        COUNT(DISTINCT session_id) AS session_count\n    FROM\n        pa_sessions\n    WHERE\n        user_id IN (SELECT user_id FROM relevant_users)\n        AND started_at BETWEEN '2025-12-01 00:00:00' AND '2025-12-31 23:59:59'\n    GROUP BY\n        user_id\n)\nSELECT\n    ROUND(AVG(session_count::NUMERIC), 2) AS average_sessions_per_user\nFROM\n    user_session_counts;",
+    "expected_description": "'create_project' 이벤트를 1회 이상 발생시키고 'upgrade_plan' 이벤트를 경험하지 않은 사용자들의 2025년 12월 평균 세션 수를 보여줍니다.",
+    "expected_columns": [
+      "average_sessions_per_user"
+    ],
+    "sort_keys": [],
+    "hint": "먼저 'create_project' 이벤트를 발생시킨 사용자 목록과 'upgrade_plan' 이벤트를 발생시킨 사용자 목록을 분리합니다. 이후 'create_project' 이벤트를 발생시켰지만 'upgrade_plan' 이벤트는 발생시키지 않은 사용자들을 필터링하세요. 이 사용자들의 2025년 12월 세션 수를 집계하고 평균을 계산합니다. LEFT JOIN과 IS NULL 조건을 활용하여 업그레이드하지 않은 사용자를 식별하고, AVG 함수와 ROUND 함수를 사용하세요. NULLIF를 사용하여 division by zero를 방지할 수도 있습니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "average_sessions_per_user",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_004_set0"
+    }
+  },
+  {
+    "problem_id": "startup_sql_005_set0",
+    "difficulty": "hard",
+    "topic": "retention",
+    "requester": "CS팀",
+    "question": "CS팀입니다. 'cancel_subscription' 이벤트 발생 전 1주일 동안, 'feature_use' 이벤트 발생 횟수가 5회 미만이거나 'api_call' 이벤트 발생 횟수가 0인 사용자들의 'country'별 비율을 알고 싶습니다. 이러한 패턴을 보이는 사용자 그룹이 어떤 국가에 집중되어 있는지 파악하여 선제적인 고객 지원 전략을 세우고 싶습니다.",
+    "context": "고객 이탈 징후를 조기에 감지하는 것은 고객 유지율을 높이는 데 필수적입니다. 특정 행동 패턴을 보이는 사용자 그룹을 식별함으로써, 이탈 위험이 높은 고객에게 선제적으로 접근하고 지원할 수 있습니다.",
+    "submission_requirements": "결과는 country, churn_risk_ratio 컬럼을 포함하며, churn_risk_ratio 기준으로 내림차순 정렬해주세요. churn_risk_ratio는 소수점 넷째 자리에서 반올림하여 표시해주세요. 비율은 0.0000 ~ 1.0000 사이의 값입니다.",
+    "answer_sql": "WITH cancel_users AS (\n    SELECT\n        user_id,\n        MIN(event_time) AS cancel_time\n    FROM\n        pa_events\n    WHERE\n        event_name = 'cancel_subscription'\n        AND event_time BETWEEN '2025-10-01 00:00:00' AND '2025-12-26 23:59:59'\n    GROUP BY\n        user_id\n),\nchurn_risk_indicators AS (\n    SELECT\n        pe.user_id,\n        SUM(CASE WHEN pe.event_name = 'feature_use' THEN 1 ELSE 0 END) AS feature_use_count,\n        SUM(CASE WHEN pe.event_name = 'api_call' THEN 1 ELSE 0 END) AS api_call_count\n    FROM\n        pa_events pe\n    JOIN\n        cancel_users cu ON pe.user_id = cu.user_id\n    WHERE\n        pe.event_time BETWEEN cu.cancel_time - INTERVAL '7 days' AND cu.cancel_time - INTERVAL '1 second'\n    GROUP BY\n        pe.user_id\n),\nchurn_risk_users AS (\n    SELECT\n        user_id\n    FROM\n        churn_risk_indicators\n    WHERE\n        feature_use_count < 5 OR api_call_count = 0\n),\nchurn_risk_user_country_counts AS (\n    SELECT\n        pu.country,\n        COUNT(DISTINCT cru.user_id) AS churn_risk_user_count\n    FROM\n        churn_risk_users cru\n    JOIN\n        pa_users pu ON cru.user_id = pu.user_id\n    GROUP BY\n        pu.country\n),\ntotal_user_country_counts AS (\n    SELECT\n        pu.country,\n        COUNT(DISTINCT pe.user_id) AS total_user_count\n    FROM\n        pa_events pe\n    JOIN\n        pa_users pu ON pe.user_id = pu.user_id\n    WHERE\n        pe.event_time BETWEEN '2025-10-01 00:00:00' AND '2025-12-26 23:59:59'\n    GROUP BY\n        pu.country\n)\nSELECT\n    crc.country,\n    ROUND(CAST(crc.churn_risk_user_count AS NUMERIC) / NULLIF(tuc.total_user_count, 0), 4) AS churn_risk_ratio\nFROM\n    churn_risk_user_country_counts crc\nJOIN\n    total_user_country_counts tuc ON crc.country = tuc.country\nWHERE\n    tuc.total_user_count > 0\nORDER BY\n    churn_risk_ratio DESC;",
+    "expected_description": "각 국가별로 'cancel_subscription' 이벤트 발생 전 1주일 동안 'feature_use' 이벤트 횟수가 5회 미만이거나 'api_call' 이벤트 횟수가 0인 사용자의 비율을 보여줍니다. 이 비율은 이탈 위험이 높은 사용자의 수를 해당 국가의 총 사용자 수로 나눈 값입니다.",
+    "expected_columns": [
+      "country",
+      "churn_risk_ratio"
+    ],
+    "sort_keys": [
+      "churn_risk_ratio"
+    ],
+    "hint": "먼저 'cancel_subscription' 이벤트를 발생시킨 사용자 목록과 해당 시간을 추출합니다. 각 취소 사용자별로 취소 시간 이전 1주일 동안의 'feature_use' 및 'api_call' 이벤트 수를 집계하는 CTE를 만듭니다. 이 조건에 맞는 사용자들을 식별한 후, 해당 사용자들을 국가별로 그룹화하고 총 사용자 수와 함께 비율을 계산합니다. NULLIF를 사용하여 0으로 나누는 것을 방지하고, CAST와 ROUND를 사용하여 원하는 형식으로 결과를 표시합니다. INTERVAL을 사용하여 날짜 범위 계산에 유의하세요.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 9,
+      "columns": [
+        {
+          "name": "country",
+          "type": "text"
+        },
+        {
+          "name": "churn_risk_ratio",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_005_set0"
+    }
+  },
+  {
+    "problem_id": "startup_sql_006_set0",
+    "difficulty": "hard",
+    "topic": "segmentation",
+    "requester": "세일즈팀",
+    "question": "세일즈팀입니다. 2025년 11월에 가입하여 'upgrade_plan' 이벤트를 1회 이상 경험한 사용자들 중, 'create_project' 이벤트를 3회 이상 발생시킨 사용자들의 'country'별 분포와 각 사용자 그룹의 평균 'amount'를 알고 싶습니다. 이는 고가치 사용자 세그먼트를 정의하는 데 도움이 될 것입니다.",
+    "context": "고가치 고객 세그먼트를 명확하게 파악하고 그들의 특징을 이해하는 것은 영업 및 마케팅 리소스의 효율적인 배분에 중요합니다. 'upgrade_plan'과 'create_project'를 모두 활발히 사용하는 그룹이 어떤 국가에 분포하고, 어느 정도의 구매 가치를 가지는지 분석하고자 합니다.",
+    "submission_requirements": "결과는 country, user_count, average_amount 컬럼을 포함하며, user_count 기준으로 내림차순 정렬해주세요. average_amount는 소수점 둘째 자리까지 반올림하여 표시해주세요. user_count는 정수형이어야 합니다.",
+    "answer_sql": "WITH november_signups AS (\n    SELECT\n        user_id\n    FROM\n        pa_users\n    WHERE\n        signup_at BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59'\n),\nupgraded_users AS (\n    SELECT DISTINCT\n        user_id\n    FROM\n        pa_events\n    WHERE\n        event_name = 'upgrade_plan'\n        AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59'\n),\nproject_creators AS (\n    SELECT\n        user_id,\n        COUNT(event_id) AS project_create_count\n    FROM\n        pa_events\n    WHERE\n        event_name = 'create_project'\n        AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59'\n    GROUP BY\n        user_id\n    HAVING\n        COUNT(event_id) >= 3\n),\nhigh_value_users AS (\n    SELECT\n        ns.user_id\n    FROM\n        november_signups ns\n    JOIN\n        upgraded_users uu ON ns.user_id = uu.user_id\n    JOIN\n        project_creators pc ON ns.user_id = pc.user_id\n),\nhigh_value_user_details AS (\n    SELECT\n        pu.country,\n        hu.user_id,\n        COALESCE(SUM(po.amount), 0) AS total_amount -- order가 없을 수도 있으므로 COALESCE 사용\n    FROM\n        high_value_users hu\n    JOIN\n        pa_users pu ON hu.user_id = pu.user_id\n    LEFT JOIN\n        pa_orders po ON hu.user_id = po.user_id -- pa_orders가 0건이므로 LEFT JOIN으로 처리\n    WHERE po.order_time BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59' -- 11월 가입 사용자의 11월 주문만 고려\n    GROUP BY\n        pu.country,\n        hu.user_id\n)\nSELECT\n    country,\n    COUNT(user_id) AS user_count,\n    ROUND(AVG(total_amount::NUMERIC), 2) AS average_amount\nFROM\n    high_value_user_details\nGROUP BY\n    country\nORDER BY\n    user_count DESC;",
+    "expected_description": "2025년 11월에 가입하여 'upgrade_plan' 이벤트를 1회 이상 경험하고, 'create_project' 이벤트를 3회 이상 발생시킨 사용자들의 국가별 분포와 각 그룹의 평균 주문 금액을 보여줍니다.",
+    "expected_columns": [
+      "country",
+      "user_count",
+      "average_amount"
+    ],
+    "sort_keys": [
+      "user_count"
+    ],
+    "hint": "먼저 2025년 11월에 가입한 사용자, 'upgrade_plan' 이벤트를 경험한 사용자, 'create_project' 이벤트를 3회 이상 발생시킨 사용자를 각각 식별하는 CTE를 만듭니다. 이 세 그룹에 모두 해당하는 'high_value_users'를 식별합니다. 이후, 이 사용자들의 국가별 분포와 pa_orders 테이블을 조인하여 총 주문 금액을 계산합니다. pa_orders 테이블이 비어있으므로, COALESCE와 LEFT JOIN을 사용하여 주문이 없는 사용자도 처리하고, SUM과 AVG 집계를 통해 최종 결과를 얻습니다. SUM에서 0으로 나누는 것을 방지하기 위해 COALESCE를 사용하고, AVG 계산 시 NUMERIC으로 캐스팅 후 ROUND 함수를 사용하세요.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 0,
+      "columns": [
+        {
+          "name": "country",
+          "type": "text"
+        },
+        {
+          "name": "user_count",
+          "type": "bigint"
+        },
+        {
+          "name": "average_amount",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_006_set0"
+    }
+  }
+]

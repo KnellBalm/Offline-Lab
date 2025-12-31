@@ -1,0 +1,205 @@
+[
+  {
+    "problem_id": "saas_sql_001_set1",
+    "difficulty": "easy",
+    "topic": "activation",
+    "requester": "그로스팀",
+    "question": "안녕하세요, 그로스팀입니다. 저희 플랫폼의 핵심 지표 중 하나인 Activation Rate를 측정하기 위해 '온보딩 완료' 이벤트(`onboarding_complete`) 이후 '기능 사용' 이벤트(`feature_use`)를 3회 이상 수행한 사용자의 일별 수를 알고 싶습니다. 2025년 11월 1일부터 11월 30일까지의 데이터를 부탁드립니다. 결과는 날짜별로 정렬해주세요.",
+    "context": "Activation Rate는 신규 사용자가 플랫폼의 가치를 제대로 경험하고 있는지 파악하는 데 중요합니다. 이를 통해 초기 이탈을 방지하고 장기적인 사용자 유지율을 높이는 전략을 수립할 수 있습니다. 'onboarding_complete' 이벤트 후 일정 횟수 이상의 'feature_use'를 Activation의 기준으로 정의하여 측정하고자 합니다.",
+    "submission_requirements": "결과는 'date' 컬럼을 기준으로 오름차순 정렬합니다. 'date'와 'activated_users' 컬럼을 포함하며, 'activated_users'는 정수형입니다. 날짜 형식은 'YYYY-MM-DD'로 통일합니다.",
+    "answer_sql": "WITH ActivatedUsers AS (\n    SELECT\n        pe.user_id,\n        MIN(CASE WHEN pe.event_name = 'onboarding_complete' THEN pe.event_time ELSE NULL END) AS onboarding_completion_time\n    FROM pa_events pe\n    WHERE pe.event_name = 'onboarding_complete'\n    GROUP BY pe.user_id\n),\nFeatureUseCounts AS (\n    SELECT\n        pe.user_id,\n        COUNT(CASE WHEN pe.event_name = 'feature_use' THEN pe.event_id ELSE NULL END) AS feature_use_count\n    FROM pa_events pe\n    JOIN ActivatedUsers au ON pe.user_id = au.user_id\n    WHERE pe.event_name = 'feature_use'\n      AND pe.event_time > au.onboarding_completion_time\n    GROUP BY pe.user_id\n)\nSELECT\n    DATE(au.onboarding_completion_time) AS date,\n    COUNT(DISTINCT fuc.user_id) AS activated_users\nFROM ActivatedUsers au\nJOIN FeatureUseCounts fuc ON au.user_id = fuc.user_id\nWHERE au.onboarding_completion_time >= '2025-11-01 00:00:00'\n  AND au.onboarding_completion_time < '2025-12-01 00:00:00'\n  AND fuc.feature_use_count >= 3\nGROUP BY DATE(au.onboarding_completion_time)\nORDER BY date ASC;",
+    "expected_description": "지정된 기간 동안 온보딩을 완료하고 3회 이상의 기능 사용 이벤트를 발생시킨 일별 활성 사용자 수를 나타냅니다.",
+    "expected_columns": [
+      "date",
+      "activated_users"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "hint": "CTE(Common Table Expression)를 사용하여 'onboarding_complete' 이벤트와 'feature_use' 이벤트를 분리하고, 이후 사용자별로 집계하여 조인합니다. 날짜 조건은 'onboarding_complete' 시간 기준으로 적용합니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 30,
+      "columns": [
+        {
+          "name": "date",
+          "type": "date"
+        },
+        {
+          "name": "activated_users",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_001_set1"
+    }
+  },
+  {
+    "problem_id": "saas_sql_002_set1",
+    "difficulty": "easy",
+    "topic": "engagement",
+    "requester": "경영진",
+    "question": "최고 경영진입니다. 지난 달(2025년 11월)의 주간 활성 사용자(WAU) 추이를 보고 싶습니다. WAU는 'login' 이벤트가 발생한 고유 사용자 수를 기준으로 정의합니다. 2025년 11월 1일부터 11월 30일까지 주차별 WAU 데이터를 부탁드립니다. 결과는 주차(start_of_week) 기준 오름차순으로 정렬해주세요.",
+    "context": "주간 활성 사용자(WAU)는 플랫폼의 전반적인 사용자 참여도를 나타내는 핵심 지표입니다. 이 지표를 통해 서비스의 현재 건강 상태를 파악하고, 마케팅 캠페인이나 프로덕트 변경 사항의 영향을 분석할 수 있습니다.",
+    "submission_requirements": "결과는 'start_of_week' 기준으로 오름차순 정렬합니다. 'start_of_week' (YYYY-MM-DD)와 'wau_count' (정수형) 컬럼을 포함합니다. 'start_of_week'는 각 주의 시작일(월요일)을 의미합니다.",
+    "answer_sql": "SELECT\n    DATE_TRUNC('week', started_at)::DATE AS start_of_week,\n    COUNT(DISTINCT pu.user_id) AS wau_count\nFROM pa_sessions ps\nJOIN pa_users pu ON ps.user_id = pu.user_id\nWHERE ps.started_at >= '2025-11-01 00:00:00' AND ps.started_at < '2025-12-01 00:00:00'\n  AND EXISTS (\n      SELECT 1\n      FROM pa_events pe\n      WHERE pe.session_id = ps.session_id\n        AND pe.event_name = 'login'\n  )\nGROUP BY start_of_week\nORDER BY start_of_week ASC;",
+    "expected_description": "2025년 11월 동안 각 주차별로 로그인 이벤트를 발생시킨 고유 사용자 수(WAU)를 보여줍니다.",
+    "expected_columns": [
+      "start_of_week",
+      "wau_count"
+    ],
+    "sort_keys": [
+      "start_of_week"
+    ],
+    "hint": "pa_sessions 테이블의 started_at 컬럼을 사용하여 주차별로 그룹화합니다. pa_events 테이블과 JOIN 또는 EXISTS 절을 사용하여 'login' 이벤트가 발생한 세션만 필터링합니다. DATE_TRUNC 함수를 사용하여 주의 시작일을 계산합니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 5,
+      "columns": [
+        {
+          "name": "start_of_week",
+          "type": "date"
+        },
+        {
+          "name": "wau_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_002_set1"
+    }
+  },
+  {
+    "problem_id": "saas_sql_003_set1",
+    "difficulty": "medium",
+    "topic": "churn",
+    "requester": "CS팀",
+    "question": "CS팀입니다. 서비스 해지 위험이 높은 사용자를 미리 파악하여 선제적으로 대응하고 싶습니다. 'cancel_subscription' 이벤트 발생 이전 7일 동안 특정 행동 패턴을 보인 사용자를 식별하고 싶습니다. 예를 들어, 'support_ticket'을 생성하거나 'feature_use' 이벤트가 급격히 감소한 경우입니다. 'cancel_subscription' 이벤트가 발생한 사용자를 대상으로, 이벤트 발생일 기준 최근 7일 이내에 'support_ticket'을 생성한 사용자 목록을 제공해주세요. 2025년 10월 29일부터 2025년 12월 28일까지의 데이터 범위 내에서 분석해주세요. 결과는 해지일 기준 내림차순으로 정렬해주세요.",
+    "context": "서비스 해지(Churn)는 비즈니스 성장에 큰 위협이 됩니다. 해지 전에 나타나는 사용자 행동 패턴을 분석하여, 위험 신호를 미리 감지하고 선제적인 고객 지원 및 관리를 통해 이탈을 방지하는 것이 중요합니다.",
+    "submission_requirements": "결과는 'cancel_date' 기준으로 내림차순 정렬합니다. 'user_id', 'cancel_date' (YYYY-MM-DD), 'support_ticket_date' (YYYY-MM-DD) 컬럼을 포함합니다. 'cancel_date'와 'support_ticket_date'는 모두 날짜 형식입니다.",
+    "answer_sql": "WITH CancelledUsers AS (\n    SELECT\n        user_id,\n        order_time AS cancel_date\n    FROM pa_orders\n    WHERE order_id IS NULL -- This assumes cancel_subscription doesn't create an order entry, and we need to find it in events.\n    -- If 'cancel_subscription' directly creates an order_id, this logic needs adjustment based on actual data representation.\n    -- For now, let's assume we need to find the event.\n), CancelSubscriptionEvents AS (\n    SELECT \n        user_id,\n        event_time AS cancel_date\n    FROM pa_events\n    WHERE event_name = 'cancel_subscription'\n)\nSELECT\n    cse.user_id,\n    DATE(cse.cancel_date) AS cancel_date,\n    DATE(pe_support.event_time) AS support_ticket_date\nFROM CancelSubscriptionEvents cse\nJOIN pa_events pe_support ON cse.user_id = pe_support.user_id\nWHERE pe_support.event_name = 'support_ticket'\n  AND pe_support.event_time BETWEEN cse.cancel_date - INTERVAL '7 days' AND cse.cancel_date\n  AND cse.cancel_date >= '2025-10-29 00:00:00' AND cse.cancel_date < '2025-12-29 00:00:00'\nGROUP BY cse.user_id, cse.cancel_date, pe_support.event_time\nORDER BY cancel_date DESC;",
+    "expected_description": "서비스를 해지한 사용자 중, 해지일로부터 7일 이내에 고객 지원 티켓을 생성한 사용자 목록과 해지일, 지원 티켓 생성일을 보여줍니다.",
+    "expected_columns": [
+      "user_id",
+      "cancel_date",
+      "support_ticket_date"
+    ],
+    "sort_keys": [
+      "cancel_date"
+    ],
+    "hint": "먼저 'cancel_subscription' 이벤트를 발생시킨 사용자와 시간을 찾습니다. 그 후, 해당 사용자에 대해 'support_ticket' 이벤트가 'cancel_subscription' 이벤트 시간으로부터 7일 이내에 발생했는지 확인합니다. 날짜 범위 조건을 명확히 설정하는 것이 중요합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 62,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "cancel_date",
+          "type": "date"
+        },
+        {
+          "name": "support_ticket_date",
+          "type": "date"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_003_set1"
+    }
+  },
+  {
+    "problem_id": "saas_sql_004_set1",
+    "difficulty": "medium",
+    "topic": "activation",
+    "requester": "PM팀",
+    "question": "PM팀입니다. 저희 플랫폼의 'Activation' 정의를 'onboarding_complete' 이벤트 발생 후 7일 이내에 'feature_use' 이벤트 5회 이상, 그리고 'create_project' 이벤트 1회 이상을 모두 수행한 사용자로 업데이트하려고 합니다. 이 기준에 맞는 사용자를 2025년 11월에 Activation한 사용자를 기준으로, 그들의 초기 7일간의 'feature_use' 평균 횟수를 알고 싶습니다. 2025년 11월 1일부터 11월 30일 사이에 'onboarding_complete' 이벤트를 수행한 사용자를 대상으로 분석해주세요. 결과는 user_id 기준 오름차순으로 정렬해주세요.",
+    "context": "Activation은 신규 사용자가 플랫폼의 핵심 가치를 경험하고 적극적으로 활용하기 시작하는 중요한 전환점입니다. Activation 기준을 명확히 하고, Activation한 사용자들의 초기 행동 패턴을 분석함으로써 더 나은 온보딩 경험과 기능 개선 방안을 모색할 수 있습니다.",
+    "submission_requirements": "결과는 'user_id' 기준으로 오름차순 정렬합니다. 'user_id'와 'avg_feature_uses_in_7days' (소수점 2자리 반올림) 컬럼을 포함합니다. 'avg_feature_uses_in_7days'는 숫자형입니다.",
+    "answer_sql": "WITH OnboardingEvents AS (\n    SELECT\n        user_id,\n        event_time AS onboarding_time\n    FROM pa_events\n    WHERE event_name = 'onboarding_complete'\n      AND event_time >= '2025-11-01 00:00:00' AND event_time < '2025-12-01 00:00:00'\n),\nActivatedUsers AS (\n    SELECT\n        oe.user_id\n    FROM OnboardingEvents oe\n    LEFT JOIN pa_events fe ON oe.user_id = fe.user_id AND fe.event_name = 'feature_use' AND fe.event_time BETWEEN oe.onboarding_time AND oe.onboarding_time + INTERVAL '7 days'\n    LEFT JOIN pa_events cpe ON oe.user_id = cpe.user_id AND cpe.event_name = 'create_project' AND cpe.event_time BETWEEN oe.onboarding_time AND oe.onboarding_time + INTERVAL '7 days'\n    GROUP BY oe.user_id\n    HAVING COUNT(DISTINCT CASE WHEN fe.event_name = 'feature_use' THEN fe.event_id ELSE NULL END) >= 5\n       AND COUNT(DISTINCT CASE WHEN cpe.event_name = 'create_project' THEN cpe.event_id ELSE NULL END) >= 1\n),\nFeatureUses AS (\n    SELECT\n        oe.user_id,\n        COUNT(fe.event_id) AS feature_use_count\n    FROM OnboardingEvents oe\n    JOIN pa_events fe ON oe.user_id = fe.user_id\n    WHERE fe.event_name = 'feature_use'\n      AND fe.event_time BETWEEN oe.onboarding_time AND oe.onboarding_time + INTERVAL '7 days'\n    GROUP BY oe.user_id\n)\nSELECT\n    au.user_id,\n    ROUND(AVG(fu.feature_use_count), 2) AS avg_feature_uses_in_7days\nFROM ActivatedUsers au\nJOIN FeatureUses fu ON au.user_id = fu.user_id\nGROUP BY au.user_id\nORDER BY au.user_id ASC;",
+    "expected_description": "2025년 11월에 Activation 기준을 충족한 사용자를 대상으로, Activation 후 7일 이내의 평균 기능 사용 횟수를 보여줍니다.",
+    "expected_columns": [
+      "user_id",
+      "avg_feature_uses_in_7days"
+    ],
+    "sort_keys": [
+      "user_id"
+    ],
+    "hint": "CTE를 활용하여 'onboarding_complete' 이벤트와 'feature_use', 'create_project' 이벤트의 발생 시점을 필터링합니다. Activation 조건을 만족하는 사용자를 추출한 후, 해당 사용자의 7일간 'feature_use' 횟수를 집계하여 평균을 계산합니다. 날짜 범위 조건과 이벤트 횟수 조건을 정확히 적용하는 것이 중요합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 2731,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "avg_feature_uses_in_7days",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_004_set1"
+    }
+  },
+  {
+    "problem_id": "saas_sql_005_set1",
+    "difficulty": "hard",
+    "topic": "upgrade",
+    "requester": "세일즈팀",
+    "question": "세일즈팀입니다. 유료 플랜으로의 업그레이드 가능성이 높은 고객을 미리 파악하여 영업 기회를 발굴하고 싶습니다. 'upgrade_plan' 이벤트가 발생하지 않은 사용자 중, 'dashboard_view' 이벤트가 월 10회 이상 발생하고 'api_call' 이벤트가 월 5회 이상 발생한 사용자를 '잠재적 업그레이드 고객'으로 정의하겠습니다. 2025년 11월, 12월 두 달 동안 위 조건에 해당하는 사용자들의 country별 집계를 부탁드립니다. 결과는 country별 집계된 사용자 수 기준 내림차순으로 정렬해주세요.",
+    "context": "유료 플랜으로의 업그레이드는 B2B SaaS 비즈니스 성장의 핵심 동력입니다. 잠재적인 업그레이드 고객을 조기에 식별하고 집중적인 영업 활동을 펼침으로써 매출 증대 효과를 극대화할 수 있습니다. 사용자들의 적극적인 플랫폼 활용 패턴을 기반으로 업그레이드 가능성을 예측하고자 합니다.",
+    "submission_requirements": "결과는 'user_count' 기준으로 내림차순 정렬합니다. 'country'와 'user_count' (정수형) 컬럼을 포함합니다. 'country'는 TEXT 타입입니다.",
+    "answer_sql": "WITH MonthlyActivity AS (\n    SELECT\n        user_id,\n        country,\n        DATE_TRUNC('month', event_time)::DATE AS month_start,\n        SUM(CASE WHEN event_name = 'dashboard_view' THEN 1 ELSE 0 END) AS dashboard_views,\n        SUM(CASE WHEN event_name = 'api_call' THEN 1 ELSE 0 END) AS api_calls\n    FROM pa_events pe\n    JOIN pa_users pu ON pe.user_id = pu.user_id\n    WHERE event_time >= '2025-11-01 00:00:00'\n      AND event_time < '2025-12-30 00:00:00' -- Up to Dec 29th for full Dec data\n      AND event_name IN ('dashboard_view', 'api_call')\n      AND NOT EXISTS (\n          SELECT 1\n          FROM pa_events up_event\n          WHERE up_event.user_id = pe.user_id\n            AND up_event.event_name = 'upgrade_plan'\n      )\n    GROUP BY user_id, country, DATE_TRUNC('month', event_time)\n)\nSELECT\n    country,\n    COUNT(DISTINCT user_id) AS user_count\nFROM MonthlyActivity\nWHERE dashboard_views >= 10\n  AND api_calls >= 5\nGROUP BY country\nORDER BY user_count DESC;",
+    "expected_description": "2025년 11월과 12월 동안, 업그레이드하지 않았으며 월 10회 이상 대시보드 보기와 월 5회 이상 API 호출을 수행한 사용자를 국가별로 집계한 결과입니다.",
+    "expected_columns": [
+      "country",
+      "user_count"
+    ],
+    "sort_keys": [
+      "user_count"
+    ],
+    "hint": "월별 사용자 활동을 집계하기 위해 `DATE_TRUNC('month', event_time)`를 사용합니다. 'upgrade_plan' 이벤트가 없는 사용자를 필터링하기 위해 `NOT EXISTS` 서브쿼리를 활용합니다. 각 이벤트의 월별 횟수를 합산하고, 최종적으로 조건을 만족하는 사용자를 국가별로 집계합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "error": "column reference \"user_id\" is ambiguous\nLINE 3:         user_id,\n                ^\n"
+    }
+  },
+  {
+    "problem_id": "saas_sql_006_set1",
+    "difficulty": "hard",
+    "topic": "engagement",
+    "requester": "플랫폼팀",
+    "question": "플랫폼팀입니다. 저희 API 사용량 증가가 실제 프로덕트 채택으로 이어지는지 확인하고 싶습니다. 'api_call' 이벤트가 10회 이상 발생한 사용자를 'Heavy API User'로 정의하고, 이들이 'create_project' 또는 'invite_member'와 같은 핵심 협업 액션을 얼마나 자주 수행하는지 분석하고 싶습니다. 2025년 11월에 'api_call' 이벤트가 10회 이상 발생한 사용자를 기준으로, 그들이 같은 기간 동안 'create_project' 또는 'invite_member' 이벤트의 총 발생 횟수를 계산해주세요. 결과는 사용자의 총 API 호출 수 기준 내림차순으로 정렬해주세요. 'api_call' 이벤트와 'create_project'/'invite_member' 이벤트는 동일 세션 내에서 발생해야 합니다.",
+    "context": "API는 저희 플랫폼의 중요한 기능 중 하나이며, API 사용량이 증가하는 것은 고객이 플랫폼을 적극적으로 활용하고 자동화하려는 시도로 볼 수 있습니다. 이러한 API 사용이 실제 협업 기능의 채택으로 이어지는지 확인함으로써 API 기능의 가치와 프로덕트 전반의 사용 증진 효과를 파악할 수 있습니다.",
+    "submission_requirements": "결과는 'total_api_calls' 기준으로 내림차순 정렬합니다. 'user_id', 'total_api_calls' (정수형), 'collaboration_actions' (정수형) 컬럼을 포함합니다. 'user_id'는 TEXT 타입입니다.",
+    "answer_sql": "WITH UserApiCallCounts AS (\n    SELECT\n        user_id,\n        COUNT(event_id) AS total_api_calls\n    FROM pa_events\n    WHERE event_name = 'api_call'\n      AND event_time >= '2025-11-01 00:00:00' AND event_time < '2025-12-01 00:00:00'\n    GROUP BY user_id\n    HAVING COUNT(event_id) >= 10\n),\nUserCollaborationActions AS (\n    SELECT\n        pe.user_id,\n        COUNT(pe.event_id) AS collaboration_actions\n    FROM pa_events pe\n    JOIN UserApiCallCounts uacc ON pe.user_id = uacc.user_id\n    WHERE pe.event_name IN ('create_project', 'invite_member')\n      AND pe.event_time >= '2025-11-01 00:00:00' AND pe.event_time < '2025-12-01 00:00:00'\n      -- Ensuring collaboration actions happened within the same month as API calls\n    GROUP BY pe.user_id\n)\nSELECT\n    uacc.user_id,\n    uacc.total_api_calls,\n    COALESCE(uca.collaboration_actions, 0) AS collaboration_actions\nFROM UserApiCallCounts uacc\nLEFT JOIN UserCollaborationActions uca ON uacc.user_id = uca.user_id\nORDER BY uacc.total_api_calls DESC;",
+    "expected_description": "2025년 11월에 10회 이상 API 호출을 한 사용자를 대상으로, 해당 기간 동안의 총 API 호출 수와 'create_project' 또는 'invite_member' 이벤트의 총 발생 횟수를 보여줍니다.",
+    "expected_columns": [
+      "user_id",
+      "total_api_calls",
+      "collaboration_actions"
+    ],
+    "sort_keys": [
+      "total_api_calls"
+    ],
+    "hint": "먼저 'api_call' 이벤트가 10회 이상 발생한 사용자를 식별하기 위한 CTE를 생성합니다. 그 후, 해당 사용자들을 대상으로 'create_project' 또는 'invite_member' 이벤트의 총 횟수를 집계하는 CTE를 만듭니다. 마지막으로 두 CTE를 JOIN하고, 협업 액션이 없는 사용자에게는 0으로 표시하기 위해 COALESCE 함수를 사용합니다. 날짜 범위와 이벤트 이름을 정확히 필터링하는 것이 중요합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 3716,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "total_api_calls",
+          "type": "bigint"
+        },
+        {
+          "name": "collaboration_actions",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_006_set1"
+    }
+  }
+]

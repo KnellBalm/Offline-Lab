@@ -1,0 +1,217 @@
+[
+  {
+    "problem_id": "commerce_sql_001_set0",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "경영진",
+    "question": "안녕하세요, 경영진입니다. 지난 2개월간 저희 플랫폼의 일별 총 거래액(GMV) 변화 추이를 파악하고 싶습니다. 이를 통해 최근의 매출 동향을 파악하여 사업 전략 수립에 참고하고자 합니다. 일별 GMV와 해당 날짜의 주문 건수를 제공해주세요. 결과는 날짜 기준 오름차순으로 정렬해주세요.",
+    "context": "경영진은 플랫폼의 전반적인 성장 추이를 파악하고, 특히 최근의 매출 변화를 이해하여 향후 사업 계획 및 의사 결정에 활용하고자 합니다. 일별 GMV와 주문 건수 추이는 매출 성과를 직관적으로 보여주는 핵심 지표입니다.",
+    "submission_requirements": "결과는 'order_date' (날짜) 기준 오름차순으로 정렬해주세요. 'daily_gmv'와 'daily_order_count'는 정수형으로 표시해주세요.",
+    "answer_sql": "SELECT\n    DATE(order_time) AS order_date,\n    SUM(amount) AS daily_gmv,\n    COUNT(order_id) AS daily_order_count\nFROM\n    pa_orders\nWHERE\n    order_time >= '2025-11-01' AND order_time < '2026-01-01' -- 2025-10-30 ~ 2025-12-29 범위 내 두 달\nGROUP BY\n    DATE(order_time)\nORDER BY\n    order_date ASC;",
+    "expected_description": "각 날짜별로 해당 날짜에 발생한 총 거래액(GMV)과 총 주문 건수를 보여줍니다.",
+    "expected_columns": [
+      "order_date",
+      "daily_gmv",
+      "daily_order_count"
+    ],
+    "sort_keys": [
+      "order_date"
+    ],
+    "hint": "pa_orders 테이블의 order_time을 DATE 함수로 변환하여 일별 집계를 내고, SUM 함수로 amount 합계를, COUNT 함수로 주문 수를 계산하세요. WHERE 절을 사용하여 데이터 범위를 제한하는 것을 잊지 마세요.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 56,
+      "columns": [
+        {
+          "name": "order_date",
+          "type": "date"
+        },
+        {
+          "name": "daily_gmv",
+          "type": "bigint"
+        },
+        {
+          "name": "daily_order_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_commerce_sql_001_set0"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_002_set0",
+    "difficulty": "easy",
+    "topic": "activation",
+    "requester": "그로스팀",
+    "question": "그로스팀입니다. 신규 가입자 중 첫 구매를 완료하는 데 걸리는 시간을 파악하고 싶습니다. 이를 통해 온보딩 과정의 효율성을 개선하고 싶습니다. 각 사용자의 첫 구매까지 걸린 시간을 'days_to_first_purchase'라는 컬럼으로 계산해주세요. 첫 구매가 없는 사용자는 결과에서 제외해주세요. 결과는 사용자의 가입일 순으로 정렬해주세요.",
+    "context": "신규 사용자가 플랫폼에 가입한 후 첫 구매까지 얼마나 시간이 걸리는지는 고객 여정의 중요한 지표입니다. 이 시간을 단축하면 신규 고객의 활성화율을 높일 수 있습니다.",
+    "submission_requirements": "결과는 'signup_at' 기준 오름차순으로 정렬해주세요. 'days_to_first_purchase'는 소수점 첫째 자리까지 표시해주세요.",
+    "answer_sql": "WITH FirstPurchase AS (\n    SELECT\n        user_id,\n        MIN(order_time) AS first_order_time\n    FROM\n        pa_orders\n    GROUP BY\n        user_id\n)\nSELECT\n    u.user_id,\n    ROUND(EXTRACT(EPOCH FROM fp.first_order_time - u.signup_at) / (60 * 60 * 24), 1) AS days_to_first_purchase\nFROM\n    pa_users u\nJOIN\n    FirstPurchase fp ON u.user_id = fp.user_id\nWHERE\n    u.signup_at >= '2025-10-30' AND u.signup_at < '2025-12-30' -- 가입일 범위 내 사용자\nORDER BY\n    u.signup_at ASC;",
+    "expected_description": "각 사용자의 가입일로부터 첫 구매까지 걸린 시간을 일(day) 단위로 보여줍니다.",
+    "expected_columns": [
+      "user_id",
+      "days_to_first_purchase"
+    ],
+    "sort_keys": [
+      "signup_at"
+    ],
+    "hint": "pa_users 테이블과 pa_orders 테이블을 조인해야 합니다. 먼저 각 사용자의 첫 구매 시간을 찾는 CTE(Common Table Expression)를 만들고, 이를 pa_users 테이블과 결합하여 가입일과 첫 구매일의 차이를 계산하세요. TIMESTAMPdiff 함수 또는 EXTRACT 함수를 활용할 수 있습니다. (PostgreSQL에서는 EXTRACT(EPOCH FROM ...)/86400 사용)",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 290,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "days_to_first_purchase",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_commerce_sql_002_set0"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_003_set0",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "PM팀",
+    "question": "PM팀입니다. 사용자들이 상품을 탐색하고 최종 구매에 이르기까지의 퍼널 단계를 분석하고 싶습니다. 각 단계별로 몇 명의 사용자가 참여했고, 이전 단계 대비 몇 퍼센트의 사용자가 다음 단계로 전환되었는지 알고 싶습니다. 특히 'view_product'에서 'add_to_cart'로의 전환율과 'add_to_cart'에서 'purchase'로의 전환율이 궁금합니다. 결과는 퍼널 단계 순으로 정렬해주세요.",
+    "context": "상품 상세 페이지(view_product)에서 장바구니 담기(add_to_cart), 그리고 최종 구매(purchase)까지의 전환율은 핵심 퍼널 지표입니다. 각 단계에서의 이탈 지점을 파악하여 사용자 경험 개선 및 전환율 최적화를 진행할 수 있습니다.",
+    "submission_requirements": "결과는 'step_order' 기준 오름차순으로 정렬해주세요. 'users_at_step'은 정수형, 'conversion_rate'는 소수점 2자리까지 표시해주세요.",
+    "answer_sql": "WITH FunnelSteps AS (\n    SELECT\n        CASE WHEN event_name = 'view_product' THEN 1 WHEN event_name = 'add_to_cart' THEN 2 WHEN event_name = 'purchase' THEN 3 ELSE 0 END AS step_order,\n        CASE WHEN event_name = 'view_product' THEN 'View Product' WHEN event_name = 'add_to_cart' THEN 'Add to Cart' WHEN event_name = 'purchase' THEN 'Purchase' ELSE 'Other' END AS step_name,\n        COUNT(DISTINCT user_id) AS users_at_step\n    FROM\n        pa_events\n    WHERE\n        event_name IN ('view_product', 'add_to_cart', 'purchase')\n        AND event_time >= '2025-11-01' AND event_time < '2026-01-01' -- 데이터 범위 내에서 분석\n    GROUP BY\n        step_order,\n        step_name\n),\nRankedSteps AS (\n    SELECT\n        step_order,\n        step_name,\n        users_at_step,\n        LAG(users_at_step, 1, 0) OVER (ORDER BY step_order) AS prev_step_users\n    FROM\n        FunnelSteps\n    WHERE step_order > 0\n)\nSELECT\n    rs.step_name,\n    rs.users_at_step,\n    ROUND(CASE WHEN rs.prev_step_users = 0 THEN 0 ELSE (rs.users_at_step::numeric / rs.prev_step_users) * 100 END, 2) AS conversion_rate\nFROM\n    RankedSteps rs\nORDER BY\n    rs.step_order;",
+    "expected_description": "상품 탐색부터 구매까지의 퍼널 각 단계별 참여 사용자 수와 이전 단계 대비 전환율을 보여줍니다.",
+    "expected_columns": [
+      "step_name",
+      "users_at_step",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "step_order"
+    ],
+    "hint": "먼저 각 퍼널 단계별로 고유 사용자 수를 계산하는 CTE를 만드세요. 그 후 LAG 함수를 사용하여 이전 단계의 사용자 수를 가져와 현재 단계 사용자 수와의 비율로 전환율을 계산하세요. DECIMAL 또는 NUMERIC 타입을 사용하여 정밀한 계산을 수행해야 합니다. 'view_product'에서 'add_to_cart'로의 전환율은 'add_to_cart' 단계의 'prev_step_users'가 'view_product' 단계의 'users_at_step'이 되도록 LAG 함수를 설정해야 합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 3,
+      "columns": [
+        {
+          "name": "step_name",
+          "type": "text"
+        },
+        {
+          "name": "users_at_step",
+          "type": "bigint"
+        },
+        {
+          "name": "conversion_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_commerce_sql_003_set0"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_004_set0",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "CX팀",
+    "question": "CX팀입니다. 장바구니에 상품을 담았으나 구매하지 않은 고객(cart abandonment)의 비율이 높다고 보고되었습니다. 이들의 이탈 패턴을 분석하고 싶습니다. 'add_to_cart' 이벤트 후 24시간 이내에 'purchase' 이벤트가 발생하지 않은 세션을 '장바구니 이탈'로 정의하고, 총 세션 수 대비 장바구니 이탈 세션 비율을 계산해주세요. 이탈이 발생한 날짜별로 집계하고, 결과는 날짜 오름차순으로 정렬해주세요.",
+    "context": "장바구니 이탈은 놓친 매출 기회를 의미합니다. 어떤 날짜에 이탈이 집중되는지 파악하면 해당 시점에 프로모션이나 개선 활동을 집중할 수 있습니다.",
+    "submission_requirements": "결과는 'session_date' 기준 오름차순으로 정렬해주세요. 'cart_abandonment_rate'는 소수점 2자리까지 표시해주세요.",
+    "answer_sql": "WITH SessionCartEvents AS (\n    SELECT\n        session_id,\n        user_id,\n        MAX(CASE WHEN event_name = 'add_to_cart' THEN event_time ELSE NULL END) AS add_to_cart_time,\n        MAX(CASE WHEN event_name = 'purchase' THEN event_time ELSE NULL END) AS purchase_time,\n        MIN(started_at) AS session_start_time\n    FROM\n        pa_events\n    WHERE\n        event_name IN ('add_to_cart', 'purchase')\n        AND event_time >= '2025-11-01' AND event_time < '2026-01-01' -- 데이터 범위 내\n    GROUP BY\n        session_id,\n        user_id\n),\nAbandonedSessions AS (\n    SELECT\n        session_id,\n        DATE(session_start_time) AS session_date,\n        CASE\n            WHEN add_to_cart_time IS NOT NULL AND (purchase_time IS NULL OR purchase_time > add_to_cart_time + INTERVAL '24 hours') THEN 1\n            ELSE 0\n        END AS is_abandoned\n    FROM\n        SessionCartEvents\n    WHERE add_to_cart_time IS NOT NULL -- 장바구니에 담은 세션만 고려\n)\nSELECT\n    session_date,\n    COUNT(session_id) AS total_sessions,\n    SUM(is_abandoned) AS abandoned_sessions,\n    ROUND(CASE WHEN COUNT(session_id) = 0 THEN 0 ELSE (SUM(is_abandoned)::numeric / COUNT(session_id)) * 100 END, 2) AS cart_abandonment_rate\nFROM\n    AbandonedSessions\nGROUP BY\n    session_date\nORDER BY\n    session_date ASC;",
+    "expected_description": "각 날짜별로 전체 세션 수, 장바구니 이탈 세션 수, 그리고 장바구니 이탈율을 보여줍니다.",
+    "expected_columns": [
+      "session_date",
+      "total_sessions",
+      "abandoned_sessions",
+      "cart_abandonment_rate"
+    ],
+    "sort_keys": [
+      "session_date"
+    ],
+    "hint": "먼저 각 세션별로 'add_to_cart'와 'purchase' 이벤트 시간을 파악해야 합니다. CTE를 사용하여 이를 그룹화한 후, 'add_to_cart' 이벤트가 있고 24시간 내에 'purchase' 이벤트가 없거나 없는 경우를 'abandoned'로 표시하세요. 이후 날짜별로 집계하여 이탈율을 계산하세요. INTERVAL 연산자를 활용하여 시간 차이를 계산하는 데 주의하세요. 'division by zero' 방지를 위해 NULLIF 또는 CASE 문을 사용하는 것을 잊지 마세요.",
+    "xp_value": 5,
+    "expected_meta": {
+      "error": "column \"started_at\" does not exist\nLINE 7:         MIN(started_at) AS session_start_time\n                    ^\n"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_005_set0",
+    "difficulty": "hard",
+    "topic": "retention",
+    "requester": "마케팅팀",
+    "question": "마케팅팀입니다. 쿠폰 사용이 최종 구매로 이어지는 효과를 정량적으로 분석하고 싶습니다. 'apply_coupon' 이벤트가 발생한 후 'purchase' 이벤트가 발생한 사용자를 '쿠폰 사용자'로 정의합니다. 이 쿠폰 사용자들이 재구매(reorder)를 얼마나 하는지, 그리고 그들의 평균 주문 금액(AOV)이 일반 구매자(apply_coupon 이벤트 없이 purchase한 사용자)와 비교했을 때 어떤지 알고 싶습니다. 결과는 'user_type' (coupon_user, non_coupon_user) 별로 AOV와 재구매율을 비교하여 보여주세요. 재구매율은 (전체 구매자 중 재구매한 사용자 수 / 전체 구매자 수) * 100 으로 계산해주세요.",
+    "context": "쿠폰은 고객 유치 및 유지에 중요한 도구입니다. 쿠폰 사용이 단순히 할인 효과뿐만 아니라 고객의 재구매 빈도와 소비 금액에 긍정적인 영향을 미치는지 파악하는 것은 마케팅 전략 수립에 필수적입니다.",
+    "submission_requirements": "결과는 'user_type'으로 정렬해주세요. AOV는 소수점 2자리, 재구매율은 소수점 2자리까지 표시해주세요.",
+    "answer_sql": "WITH UserCouponStatus AS (\n    SELECT\n        user_id,\n        MAX(CASE WHEN event_name = 'apply_coupon' THEN 1 ELSE 0 END) AS applied_coupon_flag\n    FROM\n        pa_events\n    WHERE\n        event_name IN ('apply_coupon', 'purchase')\n        AND event_time >= '2025-11-01' AND event_time < '2026-01-01' -- 데이터 범위 내\n    GROUP BY\n        user_id\n),\nFirstPurchase AS (\n    SELECT\n        user_id,\n        MIN(order_time) AS first_purchase_time\n    FROM\n        pa_orders\n    WHERE order_time >= '2025-11-01' AND order_time < '2026-01-01'\n    GROUP BY user_id\n),\nAllPurchases AS (\n    SELECT\n        o.user_id,\n        o.order_id,\n        o.order_time,\n        o.amount,\n        ucs.applied_coupon_flag,\n        CASE WHEN EXISTS (\n            SELECT 1\n            FROM pa_orders o2\n            WHERE o2.user_id = o.user_id AND o2.order_time < o.order_time\n        ) THEN 1 ELSE 0 END AS is_repeat_purchase\n    FROM\n        pa_orders o\n    JOIN\n        UserCouponStatus ucs ON o.user_id = ucs.user_id\n    JOIN\n        FirstPurchase fp ON o.user_id = fp.user_id\n    WHERE\n        o.order_time >= '2025-11-01' AND o.order_time < '2026-01-01'\n)\nSELECT\n    CASE WHEN applied_coupon_flag = 1 THEN 'coupon_user' ELSE 'non_coupon_user' END AS user_type,\n    ROUND(SUM(amount)::numeric / COUNT(DISTINCT order_id), 2) AS average_order_value,\n    ROUND(COUNT(DISTINCT CASE WHEN is_repeat_purchase = 1 THEN order_id END)::numeric * 100.0 / COUNT(DISTINCT order_id), 2) AS repeat_purchase_rate\nFROM\n    AllPurchases\nGROUP BY\n    user_type\nORDER BY\n    user_type;",
+    "expected_description": "쿠폰 사용자와 비사용자 그룹별로 평균 주문 금액(AOV)과 재구매율을 비교하여 보여줍니다.",
+    "expected_columns": [
+      "user_type",
+      "average_order_value",
+      "repeat_purchase_rate"
+    ],
+    "sort_keys": [
+      "user_type"
+    ],
+    "hint": "먼저 사용자가 쿠폰을 적용했는지 여부를 나타내는 플래그를 만드세요. 그런 다음, 모든 구매 데이터를 쿠폰 적용 여부와 함께 조회하고, 각 구매가 재구매인지 아닌지를 구분하는 로직을 추가하세요. 마지막으로, 두 그룹으로 나누어 AOV와 재구매율을 계산하세요. 재구매율 계산 시, 'repeat_purchase' 컬럼을 이용하여 분모와 분자를 정확하게 집계하는 것이 중요합니다. NULLIF 함수를 사용하여 Division by Zero를 방지해야 합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 2,
+      "columns": [
+        {
+          "name": "user_type",
+          "type": "text"
+        },
+        {
+          "name": "average_order_value",
+          "type": "numeric"
+        },
+        {
+          "name": "repeat_purchase_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_commerce_sql_005_set0"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_006_set0",
+    "difficulty": "hard",
+    "topic": "segmentation",
+    "requester": "SCM팀",
+    "question": "SCM팀입니다. 최근 'compare_product' 이벤트가 많이 발생하고 있습니다. 어떤 상품들이 주로 비교되고 있으며, 비교된 상품들이 최종적으로 구매로 이어지는 비율은 어느 정도인지 파악하고 싶습니다. 'compare_product' 이벤트에서 비교된 상품들의 ID를 얻고, 해당 상품들이 'purchase' 이벤트로 이어진 비율을 계산해주세요. 결과는 비교 횟수가 많은 순서대로 상품 ID와 해당 상품의 구매 전환율을 보여주세요. 상품 ID는 pa_events 테이블의 event_name에 포함된 상품 관련 정보에서 추출한다고 가정합니다. (실제 상품 ID가 event_name 컬럼에 직접적으로 들어있다고 가정하고, event_name에서 'compare_product::[product_id]' 와 같은 형식으로 상품 ID를 추출합니다.)",
+    "context": "상품 비교 행동은 구매 의도가 높은 사용자의 행동일 수 있습니다. 어떤 상품들이 비교되고, 그 비교 행동이 실제 구매로 이어지는지 파악하는 것은 상품 전략 및 프로모션 기획에 중요한 인사이트를 제공합니다.",
+    "submission_requirements": "결과는 'compare_count' 기준 내림차순으로 정렬해주세요. 'purchase_conversion_rate'는 소수점 2자리까지 표시해주세요.",
+    "answer_sql": "WITH ComparedProducts AS (\n    SELECT\n        session_id,\n        user_id,\n        event_time,\n        SUBSTRING(event_name FROM 'compare_product::(.*)') AS compared_product_id\n    FROM\n        pa_events\n    WHERE\n        event_name LIKE 'compare_product::%'\n        AND event_time >= '2025-11-01' AND event_time < '2026-01-01' -- 데이터 범위 내\n),\nProductPurchase AS (\n    SELECT DISTINCT\n        cp.compared_product_id,\n        pe.user_id,\n        pe.session_id,\n        pe.event_time AS purchase_time\n    FROM\n        ComparedProducts cp\n    JOIN\n        pa_events pe ON cp.user_id = pe.user_id AND cp.session_id = pe.session_id\n    WHERE\n        pe.event_name = 'purchase'\n        AND pe.event_time > cp.event_time\n        AND pe.event_time <= cp.event_time + INTERVAL '24 hours' -- 비교 후 24시간 내 구매\n),\nProductComparisonStats AS (\n    SELECT\n        cp.compared_product_id,\n        COUNT(DISTINCT cp.session_id) AS compare_count,\n        COUNT(DISTINCT pp.user_id) AS purchased_users\n    FROM\n        ComparedProducts cp\n    LEFT JOIN\n        ProductPurchase pp ON cp.compared_product_id = pp.compared_product_id AND cp.user_id = pp.user_id AND cp.session_id = pp.session_id\n    GROUP BY\n        cp.compared_product_id\n)\nSELECT\n    cps.compared_product_id,\n    cps.compare_count,\n    ROUND(CASE WHEN cps.compare_count = 0 THEN 0 ELSE (cps.purchased_users::numeric / cps.compare_count) * 100 END, 2) AS purchase_conversion_rate\nFROM\n    ProductComparisonStats cps\nWHERE cps.compared_product_id IS NOT NULL\nORDER BY\n    cps.compare_count DESC;",
+    "expected_description": "비교된 상품별로 비교 횟수와 해당 상품의 구매 전환율을 보여줍니다. 비교 횟수가 많은 상품이 우선적으로 노출됩니다.",
+    "expected_columns": [
+      "compared_product_id",
+      "compare_count",
+      "purchase_conversion_rate"
+    ],
+    "sort_keys": [
+      "compare_count"
+    ],
+    "hint": "먼저 'compare_product::[product_id]' 형태의 event_name에서 상품 ID를 추출하는 CTE를 만드세요. SUBSTRING 함수를 활용할 수 있습니다. 그런 다음, 비교된 상품이 실제로 구매로 이어진 경우를 파악하기 위한 CTE를 만드세요. 상품 ID, 사용자 ID, 세션 ID를 기준으로 조인하고, 비교 시간으로부터 24시간 이내의 구매를 고려해야 합니다. 마지막으로, 비교 횟수와 구매 전환율을 계산하세요. 'division by zero' 방지를 위해 NULLIF 또는 CASE 문을 사용하세요. 이 문제에서는 pa_events 테이블의 event_name 컬럼에 상품 ID가 포함되어 있다고 가정해야 합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 0,
+      "columns": [
+        {
+          "name": "compared_product_id",
+          "type": "text"
+        },
+        {
+          "name": "compare_count",
+          "type": "bigint"
+        },
+        {
+          "name": "purchase_conversion_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_commerce_sql_006_set0"
+    }
+  }
+]

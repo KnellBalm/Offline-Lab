@@ -1,0 +1,194 @@
+[
+  {
+    "problem_id": "commerce_sql_001_set0",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "경영진",
+    "question": "안녕하세요. 11월 한 달간의 총 GMV(Gross Merchandise Value)와 평균 주문 금액(AOV, Average Order Value)을 알고 싶습니다. 어떤 채널에서 가장 많은 매출이 발생했는지도 함께 파악하면 좋겠습니다. 결과는 채널별 GMV 내림차순으로 정렬해주세요.",
+    "context": "매출 목표 달성 현황을 파악하고, 각 채널별 기여도를 이해하여 향후 마케팅 전략 수립에 참고하고자 합니다.",
+    "submission_requirements": "결과는 'channel', 'total_gmv', 'average_order_value' 컬럼으로 구성하고, 'total_gmv' 기준으로 내림차순 정렬하여 제출해주세요. 'total_gmv'와 'average_order_value'는 소수점 둘째 자리까지 반올림합니다.",
+    "answer_sql": "WITH channel_gmv AS (\n    SELECT\n        pu.channel,\n        SUM(po.amount) AS total_gmv,\n        AVG(po.amount) AS average_order_value\n    FROM\n        pa_orders po\n    JOIN\n        pa_users pu ON po.user_id = pu.user_id\n    WHERE\n        po.order_time >= '2025-11-01 00:00:00'\n        AND po.order_time < '2025-12-01 00:00:00'\n    GROUP BY\n        pu.channel\n)\nSELECT\n    channel,\n    ROUND(total_gmv::numeric, 2) AS total_gmv,\n    ROUND(average_order_value::numeric, 2) AS average_order_value\nFROM\n    channel_gmv\nORDER BY\n    total_gmv DESC;",
+    "expected_description": "각 채널별 11월 총 GMV와 평균 주문 금액을 보여줍니다.",
+    "expected_columns": [
+      "channel",
+      "total_gmv",
+      "average_order_value"
+    ],
+    "sort_keys": [
+      "total_gmv"
+    ],
+    "hint": "pa_orders 테이블과 pa_users 테이블을 user_id로 조인하고, order_time으로 11월 데이터를 필터링합니다. SUM 함수와 AVG 함수를 사용하여 GMV와 AOV를 계산하고, 채널별로 그룹화합니다. ROUND 함수를 사용하여 소수점 둘째 자리까지 반올림합니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 4,
+      "columns": [
+        {
+          "name": "channel",
+          "type": "text"
+        },
+        {
+          "name": "total_gmv",
+          "type": "numeric"
+        },
+        {
+          "name": "average_order_value",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_commerce_sql_001_set0"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_002_set0",
+    "difficulty": "easy",
+    "topic": "funnel",
+    "requester": "PM팀",
+    "question": "신규 고객의 구매 퍼널 단계를 분석하고 싶습니다. 'page_view' -> 'view_product' -> 'add_to_cart' -> 'begin_checkout' -> 'purchase' 단계별 전환율을 계산해주세요. 분석 기간은 2025년 12월 한 달 동안의 데이터를 사용해주세요. 결과는 각 단계별 전환율을 기준으로 내림차순 정렬해주세요.",
+    "context": "사용자들이 구매 과정에서 어느 단계에서 이탈하는지 파악하여 UX 개선점을 찾고, 전환율 증대 방안을 모색하고자 합니다.",
+    "submission_requirements": "결과는 'event_name', 'conversion_rate' 컬럼으로 구성하고, 'conversion_rate' 기준으로 내림차순 정렬하여 제출해주세요. 'conversion_rate'는 소수점 넷째 자리까지 반올림합니다. 'event_name'은 'page_view', 'view_product', 'add_to_cart', 'begin_checkout', 'purchase' 순서대로 정렬합니다.",
+    "answer_sql": "WITH event_counts AS (\n    SELECT\n        COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN user_id END) AS page_view_users,\n        COUNT(DISTINCT CASE WHEN event_name = 'view_product' THEN user_id END) AS view_product_users,\n        COUNT(DISTINCT CASE WHEN event_name = 'add_to_cart' THEN user_id END) AS add_to_cart_users,\n        COUNT(DISTINCT CASE WHEN event_name = 'begin_checkout' THEN user_id END) AS begin_checkout_users,\n        COUNT(DISTINCT CASE WHEN event_name = 'purchase' THEN user_id END) AS purchase_users\n    FROM\n        pa_events\n    WHERE\n        event_time >= '2025-12-01 00:00:00'\n        AND event_time < '2025-12-31 23:59:59'\n        AND event_name IN ('page_view', 'view_product', 'add_to_cart', 'begin_checkout', 'purchase')\n),\nconversion_rates AS (\n    SELECT\n        'page_view' AS event_name, \n        1.0::numeric AS conversion_rate\n    FROM event_counts\n    UNION ALL\n    SELECT\n        'view_product' AS event_name,\n        ROUND( (view_product_users::numeric / NULLIF(page_view_users, 0)), 4) AS conversion_rate\n    FROM event_counts\n    UNION ALL\n    SELECT\n        'add_to_cart' AS event_name,\n        ROUND( (add_to_cart_users::numeric / NULLIF(view_product_users, 0)), 4) AS conversion_rate\n    FROM event_counts\n    UNION ALL\n    SELECT\n        'begin_checkout' AS event_name,\n        ROUND( (begin_checkout_users::numeric / NULLIF(add_to_cart_users, 0)), 4) AS conversion_rate\n    FROM event_counts\n    UNION ALL\n    SELECT\n        'purchase' AS event_name,\n        ROUND( (purchase_users::numeric / NULLIF(begin_checkout_users, 0)), 4) AS conversion_rate\n    FROM event_counts\n)\nSELECT \n    event_name,\n    conversion_rate\nFROM conversion_rates\nORDER BY\n    CASE\n        WHEN event_name = 'page_view' THEN 1\n        WHEN event_name = 'view_product' THEN 2\n        WHEN event_name = 'add_to_cart' THEN 3\n        WHEN event_name = 'begin_checkout' THEN 4\n        WHEN event_name = 'purchase' THEN 5\n    END ASC;",
+    "expected_description": "2025년 12월 한 달 동안의 구매 퍼널 각 단계별 전환율을 보여줍니다. 첫 번째 단계('page_view')는 항상 1.0입니다.",
+    "expected_columns": [
+      "event_name",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "event_name"
+    ],
+    "hint": "각 단계별로 구매를 완료한 유저 수를 집계합니다. 각 단계의 전환율은 해당 단계의 유저 수를 이전 단계의 유저 수로 나누어 계산합니다. NULLIF 함수를 사용하여 0으로 나누는 것을 방지합니다. UNION ALL을 사용하여 각 단계의 결과를 합칩니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 5,
+      "columns": [
+        {
+          "name": "event_name",
+          "type": "text"
+        },
+        {
+          "name": "conversion_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_commerce_sql_002_set0"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_003_set0",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "CX팀",
+    "question": "장바구니에 상품을 담았지만 구매하지 않은 고객들의 패턴을 분석하고 싶습니다. 2025년 11월 1일부터 11월 30일까지 'add_to_cart' 이벤트는 발생했지만, 해당 세션 또는 이후에 'purchase' 이벤트가 발생하지 않은 세션 수를 파악해주세요. 이탈한 세션의 기기 유형(device)별 비율도 함께 보여주세요.",
+    "context": "장바구니 이탈은 매출 손실의 주요 원인이므로, 이탈 특성을 파악하여 장바구니 유지율을 높이는 전략을 수립해야 합니다.",
+    "submission_requirements": "결과는 'device', 'abandoned_sessions_count', 'abandoned_sessions_ratio' 컬럼으로 구성하고, 'abandoned_sessions_count' 기준으로 내림차순 정렬해주세요. 'abandoned_sessions_ratio'는 소수점 넷째 자리까지 반올림합니다.",
+    "answer_sql": "WITH session_events AS (\n    SELECT\n        session_id,\n        user_id,\n        MAX(CASE WHEN event_name = 'add_to_cart' THEN 1 ELSE 0 END) AS has_add_to_cart,\n        MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) AS has_purchase\n    FROM\n        pa_events\n    WHERE\n        event_time >= '2025-11-01 00:00:00'\n        AND event_time < '2025-12-01 00:00:00'\n    GROUP BY\n        session_id,\n        user_id\n),\ncart_abandoned_sessions AS (\n    SELECT\n        se.session_id,\n        ps.device\n    FROM\n        session_events se\n    JOIN\n        pa_sessions ps ON se.session_id = ps.session_id\n    WHERE\n        se.has_add_to_cart = 1\n        AND se.has_purchase = 0\n),\ntotal_abandoned_sessions AS (\n    SELECT COUNT(DISTINCT session_id) AS total_count\n    FROM cart_abandoned_sessions\n),\ndevice_abandoned_sessions AS (\n    SELECT\n        cas.device,\n        COUNT(DISTINCT cas.session_id) AS abandoned_sessions_count\n    FROM\n        cart_abandoned_sessions cas\n    GROUP BY\n        cas.device\n)\nSELECT\n    das.device,\n    das.abandoned_sessions_count,\n    ROUND((das.abandoned_sessions_count::numeric / ta.total_count), 4) AS abandoned_sessions_ratio\nFROM\n    device_abandoned_sessions das,\n    total_abandoned_sessions ta\nORDER BY\n    das.abandoned_sessions_count DESC;",
+    "expected_description": "2025년 11월 장바구니 이탈 세션의 기기 유형별 개수와 비율을 보여줍니다.",
+    "expected_columns": [
+      "device",
+      "abandoned_sessions_count",
+      "abandoned_sessions_ratio"
+    ],
+    "sort_keys": [
+      "abandoned_sessions_count"
+    ],
+    "hint": "먼저 각 세션별로 'add_to_cart'와 'purchase' 이벤트 발생 여부를 파악합니다. 이후 'add_to_cart'는 발생했으나 'purchase'는 발생하지 않은 세션들을 필터링합니다. pa_sessions 테이블과 조인하여 기기 정보를 얻고, 기기별 이탈 세션 수를 집계합니다. 총 이탈 세션 수를 기준으로 비율을 계산합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 3,
+      "columns": [
+        {
+          "name": "device",
+          "type": "text"
+        },
+        {
+          "name": "abandoned_sessions_count",
+          "type": "bigint"
+        },
+        {
+          "name": "abandoned_sessions_ratio",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_commerce_sql_003_set0"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_004_set0",
+    "difficulty": "medium",
+    "topic": "retention",
+    "requester": "마케팅팀",
+    "question": "재구매 고객의 비중과 이들의 첫 구매 시점별 재구매율을 분석하고 싶습니다. 2025년 10월 30일부터 12월 29일까지 가입한 고객 중, 가입 후 30일 이내에 첫 구매를 완료하고, 그 이후 다시 구매한 고객의 비율을 계산해주세요. 또한, 첫 구매가 발생한 월별로 재구매율을 비교해주세요.",
+    "context": "고객 유지율은 비즈니스의 지속 가능성을 보여주는 중요한 지표이며, 재구매 고객 확보 전략 수립에 필수적입니다.",
+    "submission_requirements": "결과는 'first_purchase_month', 'repeat_purchase_rate' 컬럼으로 구성하고, 'first_purchase_month' 기준으로 오름차순 정렬해주세요. 'repeat_purchase_rate'는 소수점 넷째 자리까지 반올림합니다.",
+    "answer_sql": "WITH user_first_purchase AS (\n    SELECT\n        user_id,\n        MIN(order_time) AS first_order_time,\n        DATE_TRUNC('month', MIN(order_time)) AS first_purchase_month\n    FROM\n        pa_orders\n    WHERE\n        order_time >= '2025-10-30 00:00:00'\n        AND order_time < '2025-12-29 23:59:59'\n    GROUP BY\n        user_id\n),\nfirst_purchase_window AS (\n    SELECT\n        user_id,\n        first_purchase_month\n    FROM\n        user_first_purchase\n    WHERE\n        first_order_time >= '2025-10-30 00:00:00'\n        AND first_order_time < DATE_TRUNC('day', first_order_time) + INTERVAL '30 days'\n),\nrepeat_purchasers AS (\n    SELECT\n        po.user_id\n    FROM\n        pa_orders po\n    JOIN\n        first_purchase_window fpw ON po.user_id = fpw.user_id\n    WHERE\n        po.order_time >= fpw.first_purchase_month + INTERVAL '1 day'\n        AND po.order_time < fpw.first_purchase_month + INTERVAL '1 month'\n    GROUP BY\n        po.user_id\n),\nmonthly_repeat_rate AS (\n    SELECT\n        fpw.first_purchase_month,\n        COUNT(DISTINCT fpw.user_id) AS total_users_in_month,\n        COUNT(DISTINCT rp.user_id) AS repeat_purchaser_count\n    FROM\n        first_purchase_window fpw\n    LEFT JOIN\n        repeat_purchasers rp ON fpw.user_id = rp.user_id AND fpw.first_purchase_month = DATE_TRUNC('month', (SELECT MIN(order_time) FROM pa_orders WHERE user_id = rp.user_id))\n    GROUP BY\n        fpw.first_purchase_month\n)\nSELECT\n    first_purchase_month,\n    ROUND((repeat_purchaser_count::numeric / NULLIF(total_users_in_month, 0)), 4) AS repeat_purchase_rate\nFROM\n    monthly_repeat_rate\nORDER BY\n    first_purchase_month ASC;",
+    "expected_description": "첫 구매가 발생한 월별로 재구매 고객의 비율을 보여줍니다.",
+    "expected_columns": [
+      "first_purchase_month",
+      "repeat_purchase_rate"
+    ],
+    "sort_keys": [
+      "first_purchase_month"
+    ],
+    "hint": "먼저 각 고객의 첫 구매 시점과 첫 구매 월을 파악합니다. 'first_purchase_window' CTE에서는 가입 후 30일 이내 첫 구매를 한 고객만 필터링합니다. 'repeat_purchasers' CTE에서는 첫 구매 월 이후 1개월 내에 다시 구매한 고객을 집계합니다. 최종적으로 월별 재구매율을 계산하고 정렬합니다. 'repeat_purchasers' CTE에서 재구매 기간을 첫 구매 월 '이후'로 정확히 설정하는 데 주의하세요.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 2,
+      "columns": [
+        {
+          "name": "first_purchase_month",
+          "type": "timestamp without time zone"
+        },
+        {
+          "name": "repeat_purchase_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_commerce_sql_004_set0"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_005_set0",
+    "difficulty": "hard",
+    "topic": "engagement",
+    "requester": "그로스팀",
+    "question": "쿠폰 적용이 실제 구매 전환에 미치는 영향을 분석하고 싶습니다. 2025년 12월 한 달 동안 'apply_coupon' 이벤트를 발생시킨 후, 바로 이어지는 세션에서 'purchase' 이벤트를 발생시킨 고객의 수와 해당 고객의 평균 주문 금액을 알고 싶습니다. 또한, 'apply_coupon' 이벤트 없이 'begin_checkout' 후 'purchase'를 발생시킨 고객의 수와 평균 주문 금액과 비교 분석해주세요. 결과는 'scenario', 'customer_count', 'average_order_value' 컬럼으로 구성하고, 'customer_count' 기준으로 내림차순 정렬해주세요.",
+    "context": "쿠폰 프로모션의 효과를 객관적으로 측정하고, 쿠폰 전략의 효율성을 높이기 위한 의사결정에 활용하고자 합니다.",
+    "answer_sql": "WITH coupon_users AS (\n    SELECT DISTINCT user_id\n    FROM pa_events\n    WHERE event_name = 'apply_coupon'\n      AND event_time >= '2025-12-01 00:00:00'\n      AND event_time < '2025-12-31 23:59:59'\n),\ncoupon_and_purchase AS (\n    SELECT\n        po.user_id,\n        po.order_id,\n        po.amount\n    FROM\n        pa_orders po\n    JOIN\n        coupon_users cu ON po.user_id = cu.user_id\n    WHERE\n        po.order_time >= '2025-12-01 00:00:00'\n        AND po.order_time < '2025-12-31 23:59:59'\n        AND EXISTS (\n            SELECT 1\n            FROM pa_events pe\n            WHERE pe.user_id = po.user_id\n              AND pe.session_id = po.session_id -- assuming order_time is within the same session of apply_coupon event\n              AND pe.event_name = 'apply_coupon'\n              AND pe.event_time < po.order_time\n              AND pe.event_time >= '2025-12-01 00:00:00'\n              AND pe.event_time < '2025-12-31 23:59:59'\n        )\n),\nno_coupon_users AS (\n    SELECT DISTINCT user_id\n    FROM pa_events\n    WHERE event_name = 'begin_checkout'\n      AND event_time >= '2025-12-01 00:00:00'\n      AND event_time < '2025-12-31 23:59:59'\n      AND NOT EXISTS (\n          SELECT 1\n          FROM pa_events pe\n          WHERE pe.user_id = pa_events.user_id\n            AND pe.session_id = pa_events.session_id\n            AND pe.event_name = 'apply_coupon'\n            AND pe.event_time < pa_events.event_time\n            AND pe.event_time >= '2025-12-01 00:00:00'\n            AND pe.event_time < '2025-12-31 23:59:59'\n      )\n),\nno_coupon_purchase AS (\n    SELECT\n        po.user_id,\n        po.amount\n    FROM\n        pa_orders po\n    JOIN\n        no_coupon_users ncu ON po.user_id = ncu.user_id\n    WHERE\n        po.order_time >= '2025-12-01 00:00:00'\n        AND po.order_time < '2025-12-31 23:59:59'\n        AND EXISTS (\n            SELECT 1\n            FROM pa_events pe\n            WHERE pe.user_id = po.user_id\n              AND pe.session_id = po.session_id\n              AND pe.event_name = 'begin_checkout'\n              AND pe.event_time < po.order_time\n              AND pe.event_time >= '2025-12-01 00:00:00'\n              AND pe.event_time < '2025-12-31 23:59:59'\n        )\n),\ncoupon_agg AS (\n    SELECT\n        'Coupon Users' AS scenario,\n        COUNT(DISTINCT user_id) AS customer_count,\n        ROUND(AVG(amount::numeric), 2) AS average_order_value\n    FROM\n        coupon_and_purchase\n),\nno_coupon_agg AS (\n    SELECT\n        'No Coupon Users' AS scenario,\n        COUNT(DISTINCT user_id) AS customer_count,\n        ROUND(AVG(amount::numeric), 2) AS average_order_value\n    FROM\n        no_coupon_purchase\n)\nSELECT * FROM coupon_agg\nUNION ALL\nSELECT * FROM no_coupon_agg\nORDER BY customer_count DESC;",
+    "expected_description": "쿠폰 적용 후 구매한 고객과 쿠폰 미적용 후 구매한 고객의 수와 평균 주문 금액을 비교합니다. 'scenario' 컬럼은 비교 그룹을 나타냅니다.",
+    "expected_columns": [
+      "scenario",
+      "customer_count",
+      "average_order_value"
+    ],
+    "sort_keys": [
+      "customer_count"
+    ],
+    "hint": "먼저 'apply_coupon' 이벤트를 발생시킨 사용자 ID 목록을 추출합니다. 그 후, 해당 사용자가 'apply_coupon' 이벤트가 발생한 세션 내에서 'purchase'를 했는지 확인하여 'coupon_and_purchase' CTE를 생성합니다. 'no_coupon_users' CTE에서는 'begin_checkout' 이벤트는 발생했지만, 동시에 'apply_coupon' 이벤트는 발생하지 않은 사용자 ID 목록을 추출합니다. 'no_coupon_purchase' CTE는 이 사용자들의 구매 기록을 가져옵니다. 마지막으로 각 그룹별 고객 수와 평균 주문 금액을 집계하여 비교합니다. `EXISTS` 절을 활용하여 특정 이벤트가 특정 세션 및 시간 범위 내에 발생했는지 효율적으로 확인할 수 있습니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "error": "column po.session_id does not exist\nLINE 24:               AND pe.session_id = po.session_id -- assuming ...\n                                           ^\nHINT:  Perhaps you meant to reference the column \"pe.session_id\".\n"
+    }
+  },
+  {
+    "problem_id": "commerce_sql_006_set0",
+    "difficulty": "hard",
+    "topic": "segmentation",
+    "requester": "PM팀",
+    "question": "상품 비교 행동이 구매 전환에 미치는 영향을 분석하고 싶습니다. 2025년 11월 1일부터 12월 29일까지 'compare_product' 이벤트를 발생시킨 사용자들의 세션 중, 해당 세션 내에서 'purchase' 이벤트가 발생한 비율을 계산해주세요. 이 비율을 'compare_product' 이벤트를 발생시키지 않은 사용자들의 같은 기간 내 구매 전환율과 비교 분석하고 싶습니다. 결과는 'group_type', 'purchase_conversion_rate' 컬럼으로 구성하고, 'group_type' 기준으로 오름차순 정렬해주세요. ('compare_product' 사용자 그룹이 먼저 오도록)",
+    "context": "상품 비교 기능이 실제 구매 결정에 얼마나 기여하는지 측정하고, 해당 기능의 활성화 및 개선을 위한 인사이트를 얻고자 합니다.",
+    "submission_requirements": "결과는 'group_type', 'purchase_conversion_rate' 컬럼으로 구성하고, 'group_type' 기준으로 오름차순 정렬해주세요. 'group_type'은 'Users who compared products'와 'Users who did not compare products'로 표시합니다. 'purchase_conversion_rate'는 소수점 넷째 자리까지 반올림합니다.",
+    "answer_sql": "WITH compare_product_users AS (\n    SELECT DISTINCT user_id\n    FROM pa_events\n    WHERE event_name = 'compare_product'\n      AND event_time >= '2025-11-01 00:00:00'\n      AND event_time < '2025-12-30 00:00:00'\n),\ncompare_purchase_sessions AS (\n    SELECT DISTINCT\n        pe.session_id\n    FROM\n        pa_events pe\n    JOIN\n        compare_product_users cpu ON pe.user_id = cpu.user_id\n    WHERE\n        pe.event_name = 'purchase'\n        AND pe.event_time >= '2025-11-01 00:00:00'\n        AND pe.event_time < '2025-12-30 00:00:00'\n        AND EXISTS (\n            SELECT 1\n            FROM pa_events pe_compare\n            WHERE pe_compare.user_id = pe.user_id\n              AND pe_compare.session_id = pe.session_id\n              AND pe_compare.event_name = 'compare_product'\n              AND pe_compare.event_time >= '2025-11-01 00:00:00'\n              AND pe_compare.event_time < '2025-12-30 00:00:00'\n        )\n),\ntotal_compare_product_sessions AS (\n    SELECT COUNT(DISTINCT session_id)\n    FROM pa_events\n    WHERE event_name = 'compare_product'\n      AND event_time >= '2025-11-01 00:00:00'\n      AND event_time < '2025-12-30 00:00:00'\n),\ncompare_users_conv_rate AS (\n    SELECT\n        'Users who compared products' AS group_type,\n        ROUND(COUNT(DISTINCT cps.session_id)::numeric / NULLIF(total_compare_product_sessions.count, 0), 4) AS purchase_conversion_rate\n    FROM\n        compare_purchase_sessions cps,\n        (SELECT COUNT(*) FROM total_compare_product_sessions) AS total_compare_product_sessions\n),\nall_users_in_period AS (\n    SELECT DISTINCT user_id\n    FROM pa_sessions\n    WHERE started_at >= '2025-11-01 00:00:00'\n      AND started_at < '2025-12-30 00:00:00'\n),\nnon_compare_users AS (\n    SELECT user_id\n    FROM all_users_in_period\n    WHERE user_id NOT IN (SELECT user_id FROM compare_product_users)\n),\nnon_compare_purchase_sessions AS (\n    SELECT DISTINCT\n        pe.session_id\n    FROM\n        pa_events pe\n    JOIN\n        non_compare_users ncu ON pe.user_id = ncu.user_id\n    WHERE\n        pe.event_name = 'purchase'\n        AND pe.event_time >= '2025-11-01 00:00:00'\n        AND pe.event_time < '2025-12-30 00:00:00'\n),\nnon_compare_total_sessions AS (\n    SELECT COUNT(DISTINCT session_id)\n    FROM pa_sessions\n    WHERE user_id IN (SELECT user_id FROM non_compare_users)\n      AND started_at >= '2025-11-01 00:00:00'\n      AND started_at < '2025-12-30 00:00:00'\n),\nnon_compare_users_conv_rate AS (\n    SELECT\n        'Users who did not compare products' AS group_type,\n        ROUND(COUNT(DISTINCT ncps.session_id)::numeric / NULLIF(non_compare_total_sessions.count, 0), 4) AS purchase_conversion_rate\n    FROM\n        non_compare_purchase_sessions ncps,\n        (SELECT COUNT(*) FROM non_compare_total_sessions) AS non_compare_total_sessions\n)\nSELECT * FROM compare_users_conv_rate\nUNION ALL\nSELECT * FROM non_compare_users_conv_rate\nORDER BY group_type ASC;",
+    "expected_description": "'compare_product' 이벤트를 발생시킨 사용자들의 구매 전환율과 해당 이벤트를 발생시키지 않은 사용자들의 구매 전환율을 비교합니다. 'group_type'은 비교 대상 그룹을 나타냅니다.",
+    "expected_columns": [
+      "group_type",
+      "purchase_conversion_rate"
+    ],
+    "sort_keys": [
+      "group_type"
+    ],
+    "hint": "먼저 'compare_product' 이벤트를 발생시킨 사용자 ID 목록을 추출합니다. 이후, 해당 사용자들의 세션 중 'compare_product' 이벤트가 발생했고, 같은 세션 내에서 'purchase' 이벤트도 발생한 세션 수를 집계합니다. 전체 'compare_product' 발생 세션 수를 파악하여 전환율을 계산합니다. 'non_compare_users' CTE에서는 'compare_product' 이벤트를 발생시키지 않은 사용자들을 추출하고, 이들의 전체 세션 수 대비 구매 전환 세션 수를 계산하여 비교합니다. 세션 단위의 전환율을 계산하는 것에 유의하세요.",
+    "xp_value": 8,
+    "expected_meta": {
+      "error": "column \"total_compare_product_sessions.count\" must appear in the GROUP BY clause or be used in an aggregate function\nLINE 39: ...(COUNT(DISTINCT cps.session_id)::numeric / NULLIF(total_comp...\n                                                              ^\n"
+    }
+  }
+]

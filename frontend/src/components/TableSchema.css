@@ -8,17 +8,17 @@
 .schema-container h3 {
   margin: 0 0 1rem 0;
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .schema-empty {
   padding: 1rem;
-  color: #999;
+  color: var(--text-muted);
 }
 
 .schema-table {
   margin-bottom: 0.5rem;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -29,12 +29,13 @@
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   cursor: pointer;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   font-size: 0.85rem;
+  color: var(--text-primary);
 }
 
 .schema-table summary:hover {
-  background: #e9ecef;
+  background: var(--bg-tertiary);
 }
 
 .table-icon {
@@ -48,16 +49,16 @@
 
 .row-count {
   font-size: 0.75rem;
-  color: #666;
-  background: #e0e0e0;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .columns {
   padding: 0.5rem 0.75rem;
-  background: #fff;
-  border-top: 1px solid #e0e0e0;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
 }
 
 .column {
@@ -68,11 +69,11 @@
 }
 
 .column code {
-  color: #0066cc;
+  color: var(--accent-color);
   background: none;
 }
 
 .column .type {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.75rem;
 }

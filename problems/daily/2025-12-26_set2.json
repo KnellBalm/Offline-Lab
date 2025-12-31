@@ -1,0 +1,176 @@
+[
+  {
+    "problem_id": "startup_sql_001_set2",
+    "difficulty": "easy",
+    "topic": "activation",
+    "requester": "그로스팀",
+    "question": "우리 플랫폼의 'Activation' 지표를 정의하고, 2025년 11월에 Activation에 도달한 신규 사용자 수를 알려주세요. Activation은 'onboarding_complete' 이벤트 발생 후 7일 이내에 'feature_use' 이벤트가 3회 이상 발생하는 것으로 정의합니다. 결과를 'activation_date' 기준으로 오름차순 정렬해주세요.",
+    "context": "새로운 사용자들이 온보딩을 마치고 실제 기능을 적극적으로 활용하는지 파악하는 것이 중요합니다. Activation 지표를 통해 온보딩 프로세스의 효율성과 초기 사용자 경험을 측정하고 싶습니다.",
+    "submission_requirements": "결과는 activation_date 컬럼 기준으로 오름차순 정렬해야 합니다. activation_date는 YYYY-MM-DD 형식으로 출력합니다.",
+    "answer_sql": "WITH onboarding_completed AS (\n    SELECT\n        user_id,\n        event_time AS onboarding_complete_time\n    FROM\n        pa_events\n    WHERE\n        event_name = 'onboarding_complete'\n        AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59'\n),\nfeature_usage_count AS (\n    SELECT\n        user_id,\n        COUNT(event_id) AS feature_use_count\n    FROM\n        pa_events\n    WHERE\n        event_name = 'feature_use'\n        AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-07 23:59:59' -- onboarding_complete 후 7일 이내\n    GROUP BY\n        user_id\n)\nSELECT\n    DATE(oc.onboarding_complete_time) AS activation_date\nFROM\n    onboarding_completed oc\nJOIN\n    feature_usage_count fuc ON oc.user_id = fuc.user_id\nWHERE\n    fuc.feature_use_count >= 3\n    AND oc.onboarding_complete_time <= '2025-11-30 23:59:59'\n    AND oc.onboarding_complete_time + INTERVAL '7 days' >= oc.onboarding_complete_time -- 7일 이내 조건 명확화 (실제로는 event_time 조건에서 처리됨)\nGROUP BY\n    activation_date\nORDER BY\n    activation_date ASC;",
+    "expected_description": "각 날짜별로 Activation에 도달한 신규 사용자 수",
+    "expected_columns": [
+      "activation_date",
+      "activated_user_count"
+    ],
+    "sort_keys": [
+      "activation_date"
+    ],
+    "hint": "CTE(Common Table Expression)를 활용하여 'onboarding_complete' 이벤트와 'feature_use' 이벤트를 분리하고, 날짜 및 횟수 조건을 적용하여 Activation을 정의하세요. `DATE()` 함수를 사용하여 날짜만 추출하고, `INTERVAL`을 사용하여 시간 범위를 지정할 수 있습니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 30,
+      "columns": [
+        {
+          "name": "activation_date",
+          "type": "date"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_001_set2"
+    }
+  },
+  {
+    "problem_id": "startup_sql_002_set2",
+    "difficulty": "easy",
+    "topic": "engagement",
+    "requester": "PM팀",
+    "question": "2025년 12월에 가장 많이 발생한 상위 3개 'event_name'과 각 이벤트의 발생 횟수를 알려주세요. 결과를 발생 횟수 기준으로 내림차순 정렬해주세요.",
+    "context": "월별로 사용자들이 어떤 기능이나 액션을 가장 많이 이용하는지 파악하여 서비스의 핵심 사용 패턴을 이해하고자 합니다.",
+    "submission_requirements": "결과는 event_count 컬럼 기준으로 내림차순 정렬해야 합니다. event_count는 정수형으로 출력합니다.",
+    "answer_sql": "SELECT\n    event_name,\n    COUNT(event_id) AS event_count\nFROM\n    pa_events\nWHERE\n    event_time BETWEEN '2025-12-01 00:00:00' AND '2025-12-31 23:59:59'\nGROUP BY\n    event_name\nORDER BY\n    event_count DESC\nLIMIT 3;",
+    "expected_description": "2025년 12월에 가장 많이 발생한 상위 3개 이벤트와 해당 이벤트의 발생 횟수",
+    "expected_columns": [
+      "event_name",
+      "event_count"
+    ],
+    "sort_keys": [
+      "event_count"
+    ],
+    "hint": "WHERE 절을 사용하여 2025년 12월 데이터를 필터링하고, GROUP BY와 COUNT 함수를 사용하여 각 이벤트별 발생 횟수를 집계하세요. ORDER BY와 LIMIT을 사용하여 상위 3개 이벤트를 추출할 수 있습니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 3,
+      "columns": [
+        {
+          "name": "event_name",
+          "type": "text"
+        },
+        {
+          "name": "event_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_002_set2"
+    }
+  },
+  {
+    "problem_id": "startup_sql_003_set2",
+    "difficulty": "medium",
+    "topic": "cohort",
+    "requester": "경영진",
+    "question": "2025년 11월에 가입한 사용자들의 월별 잔존율(Retention Rate)을 분석해주세요. 잔존율은 가입한 월에 활동한 사용자 중 다음 달에도 활동한 사용자의 비율로 계산합니다. 날짜별로 계산하며, 2025년 11월 1일부터 2026년 1월 31일까지의 데이터를 포함해주세요. 각 월별 잔존율은 소수점 셋째 자리에서 반올림하여 둘째 자리까지 보여주세요.",
+    "context": "신규 사용자 확보 후 얼마나 오래 서비스를 이용하는지 파악하는 것은 장기적인 성장 전략 수립에 필수적입니다. cohort 분석을 통해 사용자 획득 시점별 잔존율 변화를 추적하고 싶습니다.",
+    "submission_requirements": "결과는 cohort_month 컬럼 기준으로 오름차순 정렬해야 합니다. retention_rate는 소수점 둘째 자리까지 표시합니다.",
+    "answer_sql": "WITH monthly_activity AS (\n    SELECT\n        user_id,\n        DATE_TRUNC('month', signup_at) AS signup_month,\n        DATE_TRUNC('month', MIN(started_at)) AS first_activity_month\n    FROM\n        pa_users u\n    JOIN\n        pa_sessions s ON u.user_id = s.user_id\n    WHERE\n        DATE_TRUNC('month', signup_at) = '2025-11-01'\n    GROUP BY\n        user_id, signup_month\n),\ncohort_size AS (\n    SELECT\n        signup_month,\n        COUNT(DISTINCT user_id) AS total_users\n    FROM\n        monthly_activity\n    GROUP BY\n        signup_month\n),\nretained_users AS (\n    SELECT\n        ma.signup_month,\n        COUNT(DISTINCT ma.user_id) AS retained_count\n    FROM\n        monthly_activity ma\n    JOIN\n        pa_sessions s ON ma.user_id = s.user_id\n    WHERE\n        DATE_TRUNC('month', s.started_at) > ma.first_activity_month\n        AND DATE_TRUNC('month', s.started_at) BETWEEN '2025-11-01' AND '2026-01-31'\n    GROUP BY\n        ma.signup_month, DATE_TRUNC('month', s.started_at)\n)\nSELECT\n    TO_CHAR(cs.signup_month, 'YYYY-MM') AS cohort_month,\n    ROUND(CAST(ru.retained_count AS NUMERIC) / cs.total_users, 2) AS retention_rate\nFROM\n    cohort_size cs\nLEFT JOIN\n    retained_users ru ON cs.signup_month = ru.signup_month\nGROUP BY\n    cohort_month, cs.total_users, ru.retained_count\nORDER BY\n    cohort_month ASC;",
+    "expected_description": "2025년 11월에 가입한 사용자들의 월별 잔존율",
+    "expected_columns": [
+      "cohort_month",
+      "retention_rate"
+    ],
+    "sort_keys": [
+      "cohort_month"
+    ],
+    "hint": "먼저 사용자의 가입 월과 첫 활동 월을 파악하는 CTE를 만듭니다. 그 다음, 각 cohort의 총 사용자 수를 계산하고, 특정 기간 동안 재활동한 사용자를 집계합니다. 최종적으로 이 두 정보를 사용하여 잔존율을 계산합니다. `DATE_TRUNC` 함수로 월을 추출하고, `TO_CHAR`로 원하는 형식의 문자열로 변환할 수 있습니다. `ROUND` 함수와 `CAST`를 사용하여 반올림 및 형변환을 수행합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "error": "column reference \"user_id\" is ambiguous\nLINE 3:         user_id,\n                ^\n"
+    }
+  },
+  {
+    "problem_id": "startup_sql_004_set2",
+    "difficulty": "medium",
+    "topic": "segmentation",
+    "requester": "세일즈팀",
+    "question": "2025년 10월부터 12월까지 'upgrade_plan' 이벤트를 발생시킨 사용자들의 country별 분석 데이터를 요청합니다. 각 국가별로 'upgrade_plan' 이벤트를 발생시킨 총 사용자 수와 해당 사용자들이 가장 많이 사용한 상위 3개 'feature_use' 이벤트 이름을 알려주세요. 결과를 국가(country) 기준으로 오름차순 정렬해주세요.",
+    "context": "어떤 국가의 사용자들이 유료 플랜으로 업그레이드를 많이 하는지, 그리고 업그레이드 전 어떤 기능들을 주로 사용하는지 파악하여 영업 전략 수립에 활용하고 싶습니다.",
+    "submission_requirements": "결과는 country 컬럼 기준으로 오름차순 정렬해야 합니다. user_count는 정수형으로 출력합니다. feature_name은 텍스트 형태로 출력합니다.",
+    "answer_sql": "WITH upgraded_users AS (\n    SELECT DISTINCT\n        user_id,\n        country\n    FROM\n        pa_users u\n    JOIN\n        pa_events e ON u.user_id = e.user_id\n    WHERE\n        e.event_name = 'upgrade_plan'\n        AND e.event_time BETWEEN '2025-10-01 00:00:00' AND '2025-12-31 23:59:59'\n),\nuser_feature_usage AS (\n    SELECT\n        uu.country,\n        uu.user_id,\n        e.event_name AS feature_name,\n        ROW_NUMBER() OVER(PARTITION BY uu.country, uu.user_id ORDER BY COUNT(e.event_id) DESC) as rn\n    FROM\n        upgraded_users uu\n    JOIN\n        pa_events e ON uu.user_id = e.user_id\n    WHERE\n        e.event_name = 'feature_use'\n        AND e.event_time BETWEEN '2025-10-01 00:00:00' AND '2025-12-31 23:59:59'\n    GROUP BY\n        uu.country, uu.user_id, e.event_name\n)\nSELECT\n    uu.country,\n    COUNT(DISTINCT uu.user_id) AS user_count,\n    STRING_AGG(DISTINCT ufu.feature_name, ', ' ORDER BY ufu.feature_name) AS top_features\nFROM\n    upgraded_users uu\nLEFT JOIN\n    user_feature_usage ufu ON uu.country = ufu.country AND uu.user_id = ufu.user_id AND ufu.rn <= 3\nGROUP BY\n    uu.country\nORDER BY\n    uu.country ASC;",
+    "expected_description": "2025년 10월~12월 업그레이드 사용자들의 국가별 업그레이드 사용자 수와 해당 사용자들이 주로 사용한 상위 3개 기능",
+    "expected_columns": [
+      "country",
+      "user_count",
+      "top_features"
+    ],
+    "sort_keys": [
+      "country"
+    ],
+    "hint": "먼저 'upgrade_plan' 이벤트를 발생시킨 사용자 ID와 국가를 추출하는 CTE를 만듭니다. 그 다음, 해당 사용자들의 'feature_use' 이벤트 사용 빈도를 계산하고, 각 사용자별로 가장 많이 사용한 상위 3개 기능을 식별하기 위해 윈도우 함수 `ROW_NUMBER()`를 사용합니다. 마지막으로 국가별로 업그레이드 사용자 수를 집계하고, 각 사용자별 상위 3개 기능을 `STRING_AGG` 함수를 사용하여 결합합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "error": "column reference \"user_id\" is ambiguous\nLINE 3:         user_id,\n                ^\n"
+    }
+  },
+  {
+    "problem_id": "startup_sql_005_set2",
+    "difficulty": "hard",
+    "topic": "churn",
+    "requester": "CS팀",
+    "question": "2025년 12월에 'cancel_subscription' 이벤트를 발생시킨 사용자들의 이전 7일 동안의 행동 패턴을 분석해주세요. 즉, 구독 취소 이벤트 발생일로부터 7일 전까지 발생한 'event_name'별 발생 횟수를 국가(country)별로 집계하고, 가장 많이 발생한 상위 2개 이벤트를 보여주세요. 날짜 범위는 2025년 11월 25일부터 12월 31일까지로 제한합니다. 결과를 국가(country) 기준으로 오름차순 정렬해주세요.",
+    "context": "구독 취소 전에 사용자들이 어떤 행동을 보이는지 분석하여 잠재적인 이탈 징후를 미리 파악하고, 선제적인 대응 전략을 수립하는 것이 목표입니다.",
+    "submission_requirements": "결과는 country 컬럼 기준으로 오름차순 정렬해야 합니다. event_count는 정수형으로 출력합니다. top_events는 텍스트 형태로 출력합니다.",
+    "answer_sql": "WITH cancel_events AS (\n    SELECT\n        user_id,\n        country,\n        event_time AS cancel_time\n    FROM\n        pa_users u\n    JOIN\n        pa_events e ON u.user_id = e.user_id\n    WHERE\n        e.event_name = 'cancel_subscription'\n        AND e.event_time BETWEEN '2025-12-01 00:00:00' AND '2025-12-31 23:59:59'\n),\npre_cancel_events AS (\n    SELECT\n        ce.user_id,\n        ce.country,\n        e.event_name,\n        e.event_time,\n        ROW_NUMBER() OVER(PARTITION BY ce.user_id ORDER BY e.event_time DESC) as rn\n    FROM\n        cancel_events ce\n    JOIN\n        pa_events e ON ce.user_id = e.user_id\n    WHERE\n        e.event_time BETWEEN ce.cancel_time - INTERVAL '7 days' AND ce.cancel_time - INTERVAL '1 second'\n        AND e.event_time BETWEEN '2025-11-25 00:00:00' AND '2025-12-31 23:59:59'\n),\nranked_events AS (\n    SELECT\n        pce.country,\n        pce.event_name,\n        COUNT(pce.event_name) AS event_count,\n        ROW_NUMBER() OVER(PARTITION BY pce.country, pce.event_name ORDER BY COUNT(pce.event_name) DESC) as rank_num\n    FROM\n        pre_cancel_events pce\n    WHERE\n        pce.rn <= 7 -- 이전 7일 이내의 이벤트만 고려\n    GROUP BY\n        pce.country, pce.event_name\n)\nSELECT\n    country,\n    STRING_AGG(event_name, ', ' ORDER BY event_count DESC) AS top_events\nFROM\n    ranked_events\nWHERE\n    rank_num <= 2\nGROUP BY\n    country\nORDER BY\n    country ASC;",
+    "expected_description": "2025년 12월 구독 취소 사용자들의 이전 7일 동안의 국가별 주요 행동 패턴 (상위 2개 이벤트)",
+    "expected_columns": [
+      "country",
+      "top_events"
+    ],
+    "sort_keys": [
+      "country"
+    ],
+    "hint": "먼저 'cancel_subscription' 이벤트를 발생시킨 사용자 ID, 국가, 취소 시간을 추출합니다. 그 후, 각 사용자별로 취소 시간으로부터 7일 이전까지 발생한 모든 이벤트를 가져옵니다. `INTERVAL`을 사용하여 시간 범위를 지정하고, `ROW_NUMBER()` 함수를 사용하여 각 사용자별로 이전 이벤트 순서를 매깁니다. 마지막으로 국가별, 이벤트별로 발생 횟수를 집계하고, `RANK_NUM`을 사용하여 상위 2개 이벤트를 필터링한 후 `STRING_AGG`로 결합합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "error": "column reference \"user_id\" is ambiguous\nLINE 3:         user_id,\n                ^\n"
+    }
+  },
+  {
+    "problem_id": "startup_sql_006_set2",
+    "difficulty": "hard",
+    "topic": "engagement",
+    "requester": "플랫폼팀",
+    "question": "2025년 11월 한 달 동안 'api_call' 이벤트를 발생시킨 모든 사용자를 대상으로, 각 사용자별 'api_call' 발생 횟수와 해당 사용자들이 가장 많이 사용한 상위 1개 'feature_use' 이벤트 이름을 추출해주세요. 'api_call' 이벤트 외 다른 이벤트는 2025년 10월 27일부터 12월 26일까지의 전체 기간을 대상으로 합니다. 결과를 'api_call' 발생 횟수 기준으로 내림차순 정렬하고, 횟수가 같으면 'user_id' 기준으로 오름차순 정렬해주세요.",
+    "context": "API 호출은 우리 플랫폼의 핵심 기능 활용도를 나타내는 중요한 지표입니다. API 호출량이 많은 사용자 그룹의 특성을 파악하고, 그들이 어떤 다른 기능들을 함께 사용하는지 이해하여 API 사용성을 개선하고 싶습니다.",
+    "submission_requirements": "결과는 api_call_count 기준으로 내림차순, user_id 기준으로 오름차순 정렬해야 합니다. api_call_count는 정수형으로 출력합니다. top_feature_use는 텍스트 형태로 출력합니다.",
+    "answer_sql": "WITH api_callers AS (\n    SELECT\n        user_id,\n        COUNT(event_id) AS api_call_count\n    FROM\n        pa_events\n    WHERE\n        event_name = 'api_call'\n        AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59'\n    GROUP BY\n        user_id\n),\nuser_top_feature AS (\n    SELECT\n        user_id,\n        event_name AS feature_use_name,\n        ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY COUNT(event_id) DESC) as rn\n    FROM\n        pa_events\n    WHERE\n        event_name = 'feature_use'\n        AND event_time BETWEEN '2025-10-27 00:00:00' AND '2025-12-26 23:59:59'\n    GROUP BY\n        user_id, event_name\n)\nSELECT\n    ac.user_id,\n    ac.api_call_count,\n    ut.feature_use_name AS top_feature_use\nFROM\n    api_callers ac\nLEFT JOIN\n    user_top_feature ut ON ac.user_id = ut.user_id AND ut.rn = 1\nORDER BY\n    ac.api_call_count DESC,\n    ac.user_id ASC;",
+    "expected_description": "2025년 11월 API 호출 사용자들의 API 호출 횟수 및 가장 많이 사용한 상위 1개 기능",
+    "expected_columns": [
+      "user_id",
+      "api_call_count",
+      "top_feature_use"
+    ],
+    "sort_keys": [
+      "api_call_count",
+      "user_id"
+    ],
+    "hint": "먼저 2025년 11월에 'api_call'을 발생시킨 사용자 ID와 해당 횟수를 집계하는 CTE를 만듭니다. 그 다음, 전체 데이터 기간 동안 'feature_use' 이벤트의 사용자별 발생 빈도를 계산하고, `ROW_NUMBER()` 함수를 사용하여 각 사용자별로 가장 많이 사용한 'feature_use' 이벤트를 식별합니다. 마지막으로 두 CTE를 JOIN하여 결과를 도출하고, 요구된 기준으로 정렬합니다. `LEFT JOIN`을 사용하여 API 호출을 했지만 feature_use 이벤트가 없는 경우에도 null로 표시되도록 합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 10366,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "api_call_count",
+          "type": "bigint"
+        },
+        {
+          "name": "top_feature_use",
+          "type": "text"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_006_set2"
+    }
+  }
+]

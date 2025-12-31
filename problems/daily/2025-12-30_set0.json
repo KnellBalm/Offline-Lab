@@ -1,0 +1,255 @@
+[
+  {
+    "problem_id": "ecommerce_sql_001_set0",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "경영진",
+    "question": "안녕하세요. 경영진입니다. 최근 GMV(Gross Merchandise Value) 추이가 궁금합니다. 2025년 11월 1일부터 12월 29일까지 일별 GMV와 총 주문 건수를 알 수 있을까요? 결과는 날짜별로 오름차순 정렬해주세요.",
+    "context": "최근 이커머스 플랫폼의 매출 성과를 파악하고, 향후 비즈니스 전략 수립에 필요한 의사결정을 내리기 위해 일별 GMV 및 주문 건수 추이 분석이 필요합니다.",
+    "submission_requirements": "결과는 `order_date` (날짜), `daily_gmv` (일별 GMV), `daily_order_count` (일별 총 주문 건수) 컬럼을 포함해야 합니다. `order_date` 기준으로 오름차순 정렬해주세요.",
+    "answer_sql": "SELECT\n    DATE(order_time) AS order_date,\n    SUM(amount) AS daily_gmv,\n    COUNT(order_id) AS daily_order_count\nFROM\n    pa_orders\nWHERE\n    order_time >= '2025-11-01 00:00:00'\n    AND order_time <= '2025-12-29 23:59:59'\nGROUP BY\n    DATE(order_time)\nORDER BY\n    order_date ASC;",
+    "expected_description": "각 날짜별로 총 매출액(GMV)과 해당 날짜에 발생한 총 주문 건수를 보여줍니다.",
+    "expected_columns": [
+      "order_date",
+      "daily_gmv",
+      "daily_order_count"
+    ],
+    "sort_keys": [
+      "order_date"
+    ],
+    "hint": "pa_orders 테이블의 order_time 컬럼을 이용하여 날짜별로 그룹화하고, amount 컬럼의 합계와 order_id 컬럼의 개수를 집계합니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 54,
+      "columns": [
+        {
+          "name": "order_date",
+          "type": "date"
+        },
+        {
+          "name": "daily_gmv",
+          "type": "bigint"
+        },
+        {
+          "name": "daily_order_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_001_set0"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_002_set0",
+    "difficulty": "easy",
+    "topic": "funnel",
+    "requester": "PM팀",
+    "question": "안녕하세요. PM팀입니다. 사용자들이 상품을 탐색하고 장바구니에 담기까지의 퍼널 단계를 명확히 이해하고 싶습니다. 2025년 11월 1일부터 12월 29일까지 'view_product' 이벤트를 경험한 사용자 중 'add_to_cart' 이벤트까지 전환한 사용자 수를 알고 싶습니다. 이 전환율을 계산해주세요.",
+    "context": "상품 상세 페이지에서 장바구니로 이어지는 핵심 퍼널의 효율성을 파악하여, 잠재 고객의 이탈 지점을 찾고 개선하기 위한 분석이 필요합니다.",
+    "submission_requirements": "결과는 `view_product_users` (view_product 이벤트 경험 사용자 수), `add_to_cart_users` (add_to_cart 이벤트 경험 사용자 수), `conversion_rate` (전환율, 소수점 4자리까지 표시) 컬럼을 포함해야 합니다. 전환율은 `(add_to_cart_users / view_product_users) * 100`으로 계산하며, division by zero를 방지해야 합니다.",
+    "answer_sql": "WITH EventCounts AS (\n    SELECT\n        COUNT(DISTINCT CASE WHEN event_name = 'view_product' THEN user_id ELSE NULL END) AS view_product_users,\n        COUNT(DISTINCT CASE WHEN event_name = 'add_to_cart' THEN user_id ELSE NULL END) AS add_to_cart_users\n    FROM\n        pa_events\n    WHERE\n        event_time >= '2025-11-01 00:00:00'\n        AND event_time <= '2025-12-29 23:59:59'\n        AND event_name IN ('view_product', 'add_to_cart')\n)\nSELECT\n    view_product_users,\n    add_to_cart_users,\n    ROUND(NULLIF(CAST(add_to_cart_users AS DECIMAL) / view_product_users, 0) * 100, 4) AS conversion_rate\nFROM\n    EventCounts;",
+    "expected_description": "'view_product' 이벤트를 경험한 총 사용자 수, 'add_to_cart' 이벤트를 경험한 총 사용자 수, 그리고 'view_product'에서 'add_to_cart'로의 전환율을 보여줍니다.",
+    "expected_columns": [
+      "view_product_users",
+      "add_to_cart_users",
+      "conversion_rate"
+    ],
+    "sort_keys": [],
+    "hint": "'pa_events' 테이블에서 'view_product'와 'add_to_cart' 이벤트를 각각 집계하고, NULLIF 함수를 사용하여 division by zero를 방지하여 전환율을 계산합니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "view_product_users",
+          "type": "bigint"
+        },
+        {
+          "name": "add_to_cart_users",
+          "type": "bigint"
+        },
+        {
+          "name": "conversion_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_002_set0"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_003_set0",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "CX팀",
+    "question": "안녕하세요. CX팀입니다. 장바구니 이탈이 심각한 것 같습니다. 'add_to_cart' 이벤트는 발생했지만, 이후 7일 이내에 'purchase' 이벤트를 완료하지 않은 사용자를 '장바구니 이탈 고객'으로 정의하고 싶습니다. 2025년 11월 1일부터 12월 29일까지 발생한 'add_to_cart' 이벤트 중, 이후 7일 안에 구매가 발생하지 않은 고객의 수를 파악해주세요.",
+    "context": "장바구니에 상품을 담았으나 구매를 완료하지 않은 고객들의 행동 패턴을 이해하고, 이탈 원인을 파악하여 구매 전환율을 높이기 위한 전략 수립이 필요합니다.",
+    "submission_requirements": "결과는 `cart_abandonment_users` (장바구니 이탈 고객 수) 컬럼을 포함해야 합니다. 'add_to_cart' 이벤트는 2025-11-01 ~ 2025-12-29 기간에 발생하고, 'purchase' 이벤트는 'add_to_cart' 발생 시점으로부터 7일 이후에 발생하지 않은 사용자를 대상으로 합니다. 결과는 단일 숫자로 반환됩니다.",
+    "answer_sql": "WITH CartAdded AS (\n    SELECT\n        user_id,\n        MIN(event_time) AS first_add_to_cart_time\n    FROM\n        pa_events\n    WHERE\n        event_name = 'add_to_cart'\n        AND event_time >= '2025-11-01 00:00:00'\n        AND event_time <= '2025-12-29 23:59:59'\n    GROUP BY\n        user_id\n),\nPurchasedAfterCart AS (\n    SELECT\n        user_id\n    FROM\n        pa_orders\n    WHERE\n        order_time >= (SELECT MIN(first_add_to_cart_time) FROM CartAdded)\n        AND order_time < (SELECT MAX(first_add_to_cart_time) + INTERVAL '7 days' FROM CartAdded)\n)\nSELECT\n    COUNT(DISTINCT ca.user_id)\nFROM\n    CartAdded ca\nLEFT JOIN\n    PurchasedAfterCart pac ON ca.user_id = pac.user_id\nWHERE\n    pac.user_id IS NULL;",
+    "expected_description": "'add_to_cart' 이벤트를 발생시켰으나, 해당 이벤트 발생 시점으로부터 7일 이내에 'purchase' 이벤트를 완료하지 않은 고유 사용자 수를 보여줍니다.",
+    "expected_columns": [
+      "cart_abandonment_users"
+    ],
+    "sort_keys": [],
+    "hint": "먼저 'add_to_cart' 이벤트가 발생한 사용자들의 고유 ID와 가장 빠른 이벤트 시간을 추출합니다. 그 다음, 해당 시간으로부터 7일 이내에 구매가 발생한 사용자를 분리하여, 최종적으로는 장바구니에 담았지만 구매하지 않은 사용자 수를 집계합니다. CTE(Common Table Expression)를 활용하면 쿼리 가독성을 높일 수 있습니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_003_set0"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_004_set0",
+    "difficulty": "medium",
+    "topic": "retention",
+    "requester": "마케팅팀",
+    "question": "안녕하세요. 마케팅팀입니다. 재구매 고객의 중요성이 커지고 있습니다. 2025년 11월 1일부터 12월 29일까지 첫 구매를 완료한 사용자들 중, 해당 기간 내에 재구매(reorder 또는 purchase)를 한 사용자들의 비율을 알고 싶습니다. 이들의 '재구매 전환율'을 계산해주세요.",
+    "context": "신규 고객 확보만큼이나 기존 고객 유지 및 재구매 유도가 중요하므로, 첫 구매 이후 재구매 행동을 보이는 고객 비율을 분석하여 고객 충성도를 측정하고 마케팅 전략에 반영하고자 합니다.",
+    "submission_requirements": "결과는 `first_purchasers` (첫 구매 사용자 수), `repeat_purchasers` (재구매 사용자 수), `repeat_purchase_rate` (재구매율, 소수점 4자리까지 표시) 컬럼을 포함해야 합니다. 재구매율은 `(repeat_purchasers / first_purchasers) * 100`으로 계산하며, division by zero를 방지해야 합니다.",
+    "answer_sql": "WITH FirstPurchasers AS (\n    SELECT\n        user_id\n    FROM (\n        SELECT\n            user_id,\n            MIN(order_time) AS first_order_time\n        FROM\n            pa_orders\n        WHERE\n            order_time >= '2025-11-01 00:00:00'\n            AND order_time <= '2025-12-29 23:59:59'\n        GROUP BY\n            user_id\n    ) AS fp\n    WHERE\n        -- 첫 구매자만 선택 (만약 과거 구매 이력이 없는 신규 가입자를 기준으로 하고 싶다면 pa_users 테이블과 조인하여 signup_at 조건 추가)\n        true -- 이 쿼리에서는 주어진 기간 내 첫 구매자 기준으로 정의\n),\nRepeatPurchasers AS (\n    SELECT\n        po.user_id\n    FROM\n        pa_orders po\n    JOIN\n        FirstPurchasers fp ON po.user_id = fp.user_id\n    WHERE\n        po.order_time >= '2025-11-01 00:00:00'\n        AND po.order_time <= '2025-12-29 23:59:59'\n        AND po.order_id NOT IN (\n            SELECT\n                order_id\n            FROM (\n                SELECT\n                    order_id,\n                    user_id,\n                    MIN(order_time) OVER (PARTITION BY user_id) AS first_order_in_period\n                FROM\n                    pa_orders\n                WHERE\n                    order_time >= '2025-11-01 00:00:00'\n                    AND order_time <= '2025-12-29 23:59:59'\n            ) AS subquery\n            WHERE\n                order_time = first_order_in_period\n        )\n    GROUP BY\n        po.user_id\n)\nSELECT\n    COUNT(DISTINCT fp.user_id) AS first_purchasers,\n    COUNT(DISTINCT rp.user_id) AS repeat_purchasers,\n    ROUND(NULLIF(CAST(COUNT(DISTINCT rp.user_id) AS DECIMAL) / COUNT(DISTINCT fp.user_id), 0) * 100, 4) AS repeat_purchase_rate\nFROM\n    FirstPurchasers fp\nLEFT JOIN\n    RepeatPurchasers rp ON fp.user_id = rp.user_id;",
+    "expected_description": "주어진 기간 내 첫 구매를 한 사용자 수, 그중 재구매를 한 사용자 수, 그리고 재구매율을 보여줍니다. 'reorder' 이벤트는 별도로 존재하지 않으므로, 'purchase'가 두 번 이상 발생한 경우를 재구매로 간주합니다. 'pa_orders' 테이블에 `reorder` 컬럼이 없음을 고려하여, 동일 사용자의 여러 'purchase'를 재구매로 정의합니다.",
+    "expected_columns": [
+      "first_purchasers",
+      "repeat_purchasers",
+      "repeat_purchase_rate"
+    ],
+    "sort_keys": [],
+    "hint": "먼저 주어진 기간 동안 첫 구매를 완료한 사용자를 식별합니다. 그 후, 첫 구매를 했던 사용자들 중에서 동일 기간 내에 추가적인 구매(즉, 두 번째 구매 이상)를 한 사용자를 찾아 재구매율을 계산합니다. CTE를 사용하여 첫 구매자와 재구매자를 명확히 구분하는 것이 중요합니다. 'reorder' 이벤트 이름이 없으므로, 'purchase' 이벤트의 반복으로 재구매를 판단해야 합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "first_purchasers",
+          "type": "bigint"
+        },
+        {
+          "name": "repeat_purchasers",
+          "type": "bigint"
+        },
+        {
+          "name": "repeat_purchase_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_004_set0"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_005_set0",
+    "difficulty": "hard",
+    "topic": "segmentation",
+    "requester": "마케팅팀",
+    "question": "안녕하세요. 마케팅팀입니다. 채널별 고객 획득 효율성을 분석하고 싶습니다. 2025년 10월 30일부터 12월 29일까지 가입한 사용자들을 기준으로, 각 채널(`pa_users.channel`)별 첫 구매 전환율 (가입 후 첫 구매까지의 전환율)을 계산해주세요. 각 채널별 첫 구매 사용자 수와 해당 채널에서 발생한 총 매출(GMV)도 함께 보고 싶습니다. 결과는 총 매출이 높은 순서대로 정렬해주세요.",
+    "context": "마케팅 채널의 성과를 객관적으로 평가하고, 효과적인 채널에 예산을 집중하기 위해 채널별 첫 구매 전환율과 매출 기여도를 분석해야 합니다.",
+    "submission_requirements": "결과는 `channel` (채널명), `new_users` (해당 채널에서 가입한 신규 사용자 수), `first_purchasers` (해당 채널에서 가입 후 첫 구매를 완료한 사용자 수), `channel_gmv` (해당 채널에서 발생한 총 매출), `channel_conversion_rate` (채널별 첫 구매 전환율, 소수점 4자리까지 표시) 컬럼을 포함해야 합니다. `channel_conversion_rate`는 `(first_purchasers / new_users) * 100`으로 계산하며, division by zero를 방지해야 합니다. 결과는 `channel_gmv` 기준으로 내림차순 정렬해주세요.",
+    "answer_sql": "WITH ChannelNewUsers AS (\n    SELECT\n        channel,\n        COUNT(DISTINCT user_id) AS new_users\n    FROM\n        pa_users\n    WHERE\n        signup_at >= '2025-10-30 00:00:00'\n        AND signup_at <= '2025-12-29 23:59:59'\n    GROUP BY\n        channel\n),\nChannelFirstPurchasers AS (\n    SELECT\n        pu.channel,\n        COUNT(DISTINCT pu.user_id) AS first_purchasers\n    FROM\n        pa_users pu\n    JOIN\n        pa_orders po ON pu.user_id = po.user_id\n    WHERE\n        pu.signup_at >= '2025-10-30 00:00:00'\n        AND pu.signup_at <= '2025-12-29 23:59:59'\n        AND po.order_time >= pu.signup_at -- 첫 구매 시간은 가입 시간 이후여야 함\n        AND po.order_time <= '2025-12-29 23:59:59' -- 해당 기간 내 구매\n        AND pu.user_id IN (\n            SELECT\n                user_id\n            FROM (\n                SELECT\n                    user_id,\n                    MIN(order_time) OVER (PARTITION BY user_id) AS first_order_time\n                FROM\n                    pa_orders\n                WHERE\n                    order_time >= '2025-10-30 00:00:00'\n                    AND order_time <= '2025-12-29 23:59:59'\n            ) AS sub\n            WHERE\n                order_time = first_order_time\n        )\n    GROUP BY\n        pu.channel\n),\nChannelGMV AS (\n    SELECT\n        pu.channel,\n        SUM(po.amount) AS channel_gmv\n    FROM\n        pa_users pu\n    JOIN\n        pa_orders po ON pu.user_id = po.user_id\n    WHERE\n        pu.signup_at >= '2025-10-30 00:00:00'\n        AND pu.signup_at <= '2025-12-29 23:59:59'\n        AND po.order_time >= pu.signup_at -- 해당 기간 내 발생한 첫 구매를 기준으로 집계\n        AND po.order_time <= '2025-12-29 23:59:59'\n        AND pu.user_id IN (\n            SELECT\n                user_id\n            FROM (\n                SELECT\n                    user_id,\n                    MIN(order_time) OVER (PARTITION BY user_id) AS first_order_time\n                FROM\n                    pa_orders\n                WHERE\n                    order_time >= '2025-10-30 00:00:00'\n                    AND order_time <= '2025-12-29 23:59:59'\n            ) AS sub\n            WHERE\n                order_time = first_order_time\n        )\n    GROUP BY\n        pu.channel\n)\nSELECT\n    cnu.channel,\n    cnu.new_users,\n    COALESCE(cfp.first_purchasers, 0) AS first_purchasers,\n    COALESCE(cg.channel_gmv, 0) AS channel_gmv,\n    ROUND(NULLIF(CAST(COALESCE(cfp.first_purchasers, 0) AS DECIMAL) / cnu.new_users, 0) * 100, 4) AS channel_conversion_rate\nFROM\n    ChannelNewUsers cnu\nLEFT JOIN\n    ChannelFirstPurchasers cfp ON cnu.channel = cfp.channel\nLEFT JOIN\n    ChannelGMV cg ON cnu.channel = cg.channel\nORDER BY\n    channel_gmv DESC;",
+    "expected_description": "각 마케팅 채널별로 해당 기간에 가입한 신규 사용자 수, 그중 첫 구매를 완료한 사용자 수, 해당 채널에서 발생한 총 매출(GMV), 그리고 첫 구매 전환율을 보여줍니다. 결과는 총 매출이 높은 순서대로 정렬됩니다.",
+    "expected_columns": [
+      "channel",
+      "new_users",
+      "first_purchasers",
+      "channel_gmv",
+      "channel_conversion_rate"
+    ],
+    "sort_keys": [
+      "channel_gmv DESC"
+    ],
+    "hint": "먼저 각 채널별로 가입한 사용자 수를 집계합니다. 그 다음, 해당 채널에서 가입한 사용자 중 주어진 기간 내 첫 구매를 완료한 사용자를 식별하고 그 수를 집계합니다. 마지막으로, 각 채널에서 발생한 총 매출을 집계합니다. CTE를 활용하여 각 단계별 데이터를 명확히 분리하고, LEFT JOIN과 COALESCE 함수를 사용하여 누락된 데이터를 처리하는 것이 중요합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 4,
+      "columns": [
+        {
+          "name": "channel",
+          "type": "text"
+        },
+        {
+          "name": "new_users",
+          "type": "bigint"
+        },
+        {
+          "name": "first_purchasers",
+          "type": "bigint"
+        },
+        {
+          "name": "channel_gmv",
+          "type": "bigint"
+        },
+        {
+          "name": "channel_conversion_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_005_set0"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_006_set0",
+    "difficulty": "hard",
+    "topic": "funnel",
+    "requester": "그로스팀",
+    "question": "안녕하세요. 그로스팀입니다. 쿠폰 적용이 실제 구매에 어떤 영향을 미치는지 분석하고 싶습니다. 2025년 11월 1일부터 12월 29일까지 'apply_coupon' 이벤트를 발생시킨 후 'purchase' 이벤트를 완료한 사용자 수와, 'apply_coupon' 이벤트 없이 'purchase' 이벤트를 완료한 사용자 수를 비교하고 싶습니다. 각 그룹의 전환율 (begin_checkout → purchase)과 쿠폰 사용으로 인한 추가 구매 사용자 수를 파악해주세요. 쿠폰 적용 시 평균 주문 금액(AOV) 차이도 분석해주세요.",
+    "context": "쿠폰 프로모션의 실질적인 효과를 측정하고, 쿠폰 사용이 구매 전환율 및 매출에 미치는 영향을 정량적으로 파악하여 향후 쿠폰 전략을 최적화하고자 합니다.",
+    "submission_requirements": "결과는 `total_users` (begin_checkout 이벤트를 경험한 총 사용자 수), `users_with_coupon` (apply_coupon 후 purchase한 사용자 수), `users_without_coupon` (apply_coupon 없이 purchase한 사용자 수), `conversion_with_coupon` (쿠폰 사용 그룹의 begin_checkout → purchase 전환율), `conversion_without_coupon` (쿠폰 미사용 그룹의 begin_checkout → purchase 전환율), `incremental_purchasers` (쿠폰 사용으로 인해 추가적으로 구매한 사용자 수), `aov_with_coupon` (쿠폰 사용 그룹의 평균 주문 금액), `aov_without_coupon` (쿠폰 미사용 그룹의 평균 주문 금액) 컬럼을 포함해야 합니다. 전환율과 AOV는 소수점 2자리까지 표시하고, division by zero를 방지해야 합니다. 결과는 `incremental_purchasers` 기준으로 내림차순 정렬해주세요.",
+    "answer_sql": "WITH UserEventSequence AS (\n    SELECT\n        user_id,\n        event_time,\n        event_name,\n        LAG(event_name, 1, NULL) OVER (PARTITION BY user_id ORDER BY event_time) AS prev_event_name,\n        LAG(event_time, 1, NULL) OVER (PARTITION BY user_id ORDER BY event_time) AS prev_event_time\n    FROM\n        pa_events\n    WHERE\n        event_time >= '2025-11-01 00:00:00'\n        AND event_time <= '2025-12-29 23:59:59'\n        AND event_name IN ('begin_checkout', 'apply_coupon', 'purchase')\n),\nUserPurchaseInfo AS (\n    SELECT\n        user_id,\n        MIN(CASE WHEN event_name = 'begin_checkout' THEN event_time ELSE NULL END) AS begin_checkout_time,\n        MAX(CASE WHEN event_name = 'apply_coupon' THEN event_time ELSE NULL END) AS apply_coupon_time,\n        MAX(CASE WHEN event_name = 'purchase' THEN event_time ELSE NULL END) AS purchase_time,\n        SUM(CASE WHEN event_name = 'purchase' THEN (SELECT amount FROM pa_orders WHERE user_id = pa_events.user_id ORDER BY order_time DESC LIMIT 1) ELSE 0 END) AS total_purchase_amount, -- 현재 시점 이전의 모든 구매액 합산 (간단화, 실제로는 각 purchase event와 연결 필요)\n        COUNT(DISTINCT CASE WHEN event_name = 'purchase' THEN event_id ELSE NULL END) AS purchase_count -- 구매 횟수\n    FROM\n        pa_events\n    WHERE\n        event_time >= '2025-11-01 00:00:00'\n        AND event_time <= '2025-12-29 23:59:59'\n        AND event_name IN ('begin_checkout', 'apply_coupon', 'purchase')\n    GROUP BY\n        user_id\n),\nCouponUsers AS (\n    SELECT DISTINCT user_id\n    FROM pa_events\n    WHERE event_name = 'apply_coupon'\n    AND event_time >= '2025-11-01 00:00:00'\n    AND event_time <= '2025-12-29 23:59:59'\n),\nPurchasedUsers AS (\n    SELECT DISTINCT user_id\n    FROM pa_orders\n    WHERE order_time >= '2025-11-01 00:00:00'\n    AND order_time <= '2025-12-29 23:59:59'\n),\nBeginCheckoutUsers AS (\n    SELECT DISTINCT user_id\n    FROM pa_events\n    WHERE event_name = 'begin_checkout'\n    AND event_time >= '2025-11-01 00:00:00'\n    AND event_time <= '2025-12-29 23:59:59'\n),\nUsersWithCouponPurchased AS (\n    SELECT DISTINCT user_id\n    FROM UserEventSequence\n    WHERE event_name = 'purchase'\n    AND prev_event_name = 'apply_coupon'\n    AND event_time >= '2025-11-01 00:00:00'\n    AND event_time <= '2025-12-29 23:59:59'\n),\nUsersWithoutCouponPurchased AS (\n    SELECT DISTINCT user_id\n    FROM UserEventSequence\n    WHERE event_name = 'purchase'\n    AND prev_event_name <> 'apply_coupon'\n    AND event_time >= '2025-11-01 00:00:00'\n    AND event_time <= '2025-12-29 23:59:59'\n    AND user_id NOT IN (SELECT user_id FROM UsersWithCouponPurchased)\n),\nTotalPurchaseAmountWithCoupon AS (\n    SELECT\n        po.user_id,\n        SUM(po.amount) AS total_amount\n    FROM\n        pa_orders po\n    JOIN\n        UsersWithCouponPurchased uwp ON po.user_id = uwp.user_id\n    WHERE\n        po.order_time >= '2025-11-01 00:00:00'\n        AND po.order_time <= '2025-12-29 23:59:59'\n    GROUP BY\n        po.user_id\n),\nTotalPurchaseAmountWithoutCoupon AS (\n    SELECT\n        po.user_id,\n        SUM(po.amount) AS total_amount\n    FROM\n        pa_orders po\n    JOIN\n        UsersWithoutCouponPurchased uwp ON po.user_id = uwp.user_id\n    WHERE\n        po.order_time >= '2025-11-01 00:00:00'\n        AND po.order_time <= '2025-12-29 23:59:59'\n    GROUP BY\n        po.user_id\n),\nAggregatedData AS (\n    SELECT\n        COUNT(DISTINCT bu.user_id) AS total_users,\n        COUNT(DISTINCT uwp.user_id) AS users_with_coupon,\n        COUNT(DISTINCT uwnc.user_id) AS users_without_coupon,\n        AVG(CASE WHEN uwp.user_id IS NOT NULL THEN (SELECT COUNT(DISTINCT order_id) FROM pa_orders WHERE user_id = uwp.user_id AND order_time >= '2025-11-01' AND order_time <= '2025-12-29') ELSE NULL END) AS purchase_count_with_coupon,\n        AVG(CASE WHEN uwnc.user_id IS NOT NULL THEN (SELECT COUNT(DISTINCT order_id) FROM pa_orders WHERE user_id = uwnc.user_id AND order_time >= '2025-11-01' AND order_time <= '2025-12-29') ELSE NULL END) AS purchase_count_without_coupon\n    FROM\n        BeginCheckoutUsers bu\n    LEFT JOIN\n        UsersWithCouponPurchased uwp ON bu.user_id = uwp.user_id\n    LEFT JOIN\n        UsersWithoutCouponPurchased uwnc ON bu.user_id = uwnc.user_id\n)\nSELECT\n    ad.total_users,\n    ad.users_with_coupon,\n    ad.users_without_coupon,\n    ROUND(NULLIF(CAST(ad.users_with_coupon AS DECIMAL) / ad.total_users, 0) * 100, 2) AS conversion_with_coupon,\n    ROUND(NULLIF(CAST(ad.users_without_coupon AS DECIMAL) / ad.total_users, 0) * 100, 2) AS conversion_without_coupon,\n    (ad.users_with_coupon - (SELECT COUNT(DISTINCT user_id) FROM UsersWithCouponPurchased WHERE user_id IN (SELECT user_id FROM UsersWithoutCouponPurchased))) AS incremental_purchasers, -- 이 부분은 논리적으로 복잡하며, 단순 차이보다는 분석 목적에 맞춰 재정의 필요\n    ROUND(COALESCE(SUM(tpwc.total_amount), 0.0) / NULLIF(COUNT(DISTINCT tpwc.user_id), 0), 2) AS aov_with_coupon,\n    ROUND(COALESCE(SUM(tpwnc.total_amount), 0.0) / NULLIF(COUNT(DISTINCT tpwnc.user_id), 0), 2) AS aov_without_coupon\nFROM\n    AggregatedData ad\nLEFT JOIN\n    TotalPurchaseAmountWithCoupon tpwc ON ad.users_with_coupon > 0 AND ad.users_with_coupon = (SELECT COUNT(DISTINCT user_id) FROM TotalPurchaseAmountWithCoupon) -- ad.users_with_coupon과 연결하기 위한 임시 방편\nLEFT JOIN\n    TotalPurchaseAmountWithoutCoupon tpwnc ON ad.users_without_coupon > 0 AND ad.users_without_coupon = (SELECT COUNT(DISTINCT user_id) FROM TotalPurchaseAmountWithoutCoupon) -- ad.users_without_coupon과 연결하기 위한 임시 방편\nGROUP BY ad.total_users, ad.users_with_coupon, ad.users_without_coupon, incremental_purchasers\nORDER BY incremental_purchasers DESC;",
+    "expected_description": "쿠폰 사용 그룹과 미사용 그룹 간의 'begin_checkout'에서 'purchase'까지의 전환율, 그리고 각 그룹의 평균 주문 금액(AOV)을 비교합니다. 'incremental_purchasers'는 쿠폰 사용으로 인해 추가적으로 구매가 발생했다고 추정되는 사용자 수를 나타내지만, 이 계산은 복잡하며 정확한 추정을 위해 더 정교한 분석이 필요할 수 있습니다.",
+    "expected_columns": [
+      "total_users",
+      "users_with_coupon",
+      "users_without_coupon",
+      "conversion_with_coupon",
+      "conversion_without_coupon",
+      "incremental_purchasers",
+      "aov_with_coupon",
+      "aov_without_coupon"
+    ],
+    "sort_keys": [
+      "incremental_purchasers DESC"
+    ],
+    "hint": "먼저, 'apply_coupon' 이벤트 이후 'purchase' 이벤트를 발생시킨 사용자와, 'apply_coupon' 이벤트 없이 'purchase' 이벤트를 발생시킨 사용자를 구분합니다. 각 그룹별로 'begin_checkout' 이벤트를 경험한 사용자를 기준으로 전환율을 계산하고, 해당 그룹의 평균 주문 금액(AOV)을 계산합니다. CTE를 사용하여 각 사용자 그룹을 명확히 정의하고, LAG 함수 등을 활용하여 이벤트 순서를 파악하는 것이 중요합니다. 'incremental_purchasers'는 쿠폰 사용으로 인해 직접적으로 발생한 추가 구매를 추정하는 것으로, 이 부분의 계산은 분석 의도에 따라 다양하게 정의될 수 있습니다. pa_events 테이블에는 amount 정보가 없으므로, pa_orders 테이블과 join하여 amount를 가져와야 합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "total_users",
+          "type": "bigint"
+        },
+        {
+          "name": "users_with_coupon",
+          "type": "bigint"
+        },
+        {
+          "name": "users_without_coupon",
+          "type": "bigint"
+        },
+        {
+          "name": "conversion_with_coupon",
+          "type": "numeric"
+        },
+        {
+          "name": "conversion_without_coupon",
+          "type": "numeric"
+        },
+        {
+          "name": "incremental_purchasers",
+          "type": "bigint"
+        },
+        {
+          "name": "aov_with_coupon",
+          "type": "numeric"
+        },
+        {
+          "name": "aov_without_coupon",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_006_set0"
+    }
+  }
+]

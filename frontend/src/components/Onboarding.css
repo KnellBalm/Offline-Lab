@@ -1,0 +1,236 @@
+/* frontend/src/components/Onboarding.css */
+
+/* 오버레이 - 반투명 배경 */
+.onboarding-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9998;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* 하이라이트된 요소 - 오버레이 위에 표시 */
+.onboarding-highlight {
+    position: relative;
+    z-index: 9999 !important;
+    box-shadow: 0 0 0 4px #3b82f6, 0 0 20px rgba(59, 130, 246, 0.5) !important;
+    border-radius: 8px !important;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 4px #3b82f6, 0 0 20px rgba(59, 130, 246, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 6px #3b82f6, 0 0 30px rgba(59, 130, 246, 0.7);
+    }
+}
+
+/* 툴팁 */
+.onboarding-tooltip {
+    position: fixed;
+    width: 440px;
+    padding: 24px;
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    border-radius: 16px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    z-index: 10000;
+    animation: slideUp 0.4s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.onboarding-tooltip.center {
+    text-align: center;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 헤더 */
+.onboarding-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.step-indicator {
+    font-size: 0.8rem;
+    color: #888;
+    background: #f0f0f0;
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+/* 제목 */
+.onboarding-title {
+    margin: 0 0 12px 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.4;
+}
+
+/* 내용 */
+.onboarding-content {
+    margin: 0 0 24px 0;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #555;
+}
+
+/* 진행 표시 */
+.onboarding-progress {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.progress-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ddd;
+    transition: all 0.3s ease;
+}
+
+.progress-dot.active {
+    background: #3b82f6;
+    transform: scale(1.4);
+}
+
+.progress-dot.completed {
+    background: #22c55e;
+}
+
+/* 버튼 영역 */
+.onboarding-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-group {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-skip {
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    color: #888;
+    background: transparent;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-skip:hover {
+    color: #555;
+    border-color: #bbb;
+    background: #f5f5f5;
+}
+
+.btn-prev {
+    padding: 12px 24px;
+    font-size: 0.9rem;
+    color: #555;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.btn-prev:hover {
+    background: #e0e0e0;
+}
+
+.btn-next {
+    padding: 12px 28px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-next:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+/* 다크 모드 대응 */
+[data-theme="dark"] .onboarding-tooltip {
+    background: linear-gradient(145deg, #2d2d44, #252536);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .onboarding-title {
+    color: #fff;
+}
+
+[data-theme="dark"] .onboarding-content {
+    color: #ccc;
+}
+
+[data-theme="dark"] .step-indicator {
+    background: #3a3a4a;
+    color: #aaa;
+}
+
+[data-theme="dark"] .progress-dot {
+    background: #3a3a4a;
+}
+
+[data-theme="dark"] .btn-skip {
+    color: #aaa;
+    border-color: #3a3a4a;
+}
+
+[data-theme="dark"] .btn-skip:hover {
+    background: #3a3a4a;
+    color: #fff;
+}
+
+[data-theme="dark"] .btn-prev {
+    background: #3a3a4a;
+    color: #ccc;
+}
+
+[data-theme="dark"] .btn-prev:hover {
+    background: #4a4a5a;
+}

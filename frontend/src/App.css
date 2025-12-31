@@ -75,12 +75,46 @@
   border-radius: 4px;
 }
 
-/* 메인 컨텐츠 */
+.stats-link {
+  padding: 0.25rem 0.6rem;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 4px;
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.stats-link:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(20deg);
+}
+
 .main {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: var(--bg-secondary);
 }
 
 .page-placeholder {
@@ -97,25 +131,28 @@
   padding: 2rem;
   overflow-y: auto;
   height: 100%;
+  color: var(--text-primary);
 }
 
 .admin-page h1 {
   margin: 0 0 1.5rem 0;
   font-size: 1.5rem;
+  color: var(--text-primary);
 }
 
 .admin-section {
-  background: #fff;
+  background: var(--bg-primary);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
 }
 
 .admin-section h2 {
   margin: 0 0 1rem 0;
   font-size: 1.1rem;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .status-grid {
@@ -128,16 +165,21 @@
   display: flex;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
   border-radius: 6px;
+  color: var(--text-primary);
+}
+
+.status-item span:first-child {
+  color: var(--text-secondary);
 }
 
 .status-item .ok {
-  color: #28a745;
+  color: var(--success-color);
 }
 
 .status-item .error {
-  color: #dc3545;
+  color: var(--error-color);
 }
 
 .action-buttons {
@@ -150,7 +192,7 @@
   padding: 0.75rem 1.25rem;
   border: none;
   border-radius: 6px;
-  background: #007bff;
+  background: var(--accent-color);
   color: #fff;
   font-size: 0.9rem;
   cursor: pointer;
@@ -158,20 +200,20 @@
 }
 
 .action-buttons button:hover {
-  background: #0056b3;
+  background: var(--accent-hover);
 }
 
 .action-buttons button:disabled {
-  background: #ccc;
+  background: var(--text-muted);
   cursor: not-allowed;
 }
 
 .message {
   margin-top: 1rem;
   padding: 0.75rem;
-  background: #e7f1ff;
+  background: rgba(99, 102, 241, 0.15);
   border-radius: 4px;
-  color: #0066cc;
+  color: var(--accent-color);
 }
 
 .admin-table {
@@ -183,12 +225,14 @@
 .admin-table td {
   padding: 0.75rem;
   text-align: left;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .admin-table th {
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
   font-weight: 600;
+  color: var(--text-secondary);
 }
 
 /* 성적 페이지 */
@@ -196,19 +240,20 @@
   padding: 2rem;
   overflow-y: auto;
   height: 100%;
-  background: #f5f5f5;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .stats-page h1 {
   margin: 0 0 1.5rem 0;
   font-size: 1.8rem;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .stats-page h3 {
   margin: 0 0 1rem 0;
   font-size: 1.1rem;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .stats-overview {
@@ -219,11 +264,12 @@
 }
 
 .stats-card {
-  background: #fff;
+  background: var(--bg-primary);
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
   transition: transform 0.2s;
 }
 
@@ -239,26 +285,27 @@
 .stats-value {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .stats-label {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-muted);
   margin-top: 0.25rem;
 }
 
 .stats-progress {
-  background: #fff;
+  background: var(--bg-primary);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
 }
 
 .progress-bar {
   height: 20px;
-  background: #e0e0e0;
+  background: var(--bg-tertiary);
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 0.75rem;
@@ -266,16 +313,17 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  background: linear-gradient(90deg, var(--success-color), #8BC34A);
   border-radius: 10px;
   transition: width 0.5s ease;
 }
 
 .stats-history {
-  background: #fff;
+  background: var(--bg-primary);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
 }
 
 .history-table {
@@ -287,21 +335,22 @@
 .history-table td {
   padding: 0.75rem;
   text-align: left;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .history-table th {
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .history-table tr.correct {
-  background: rgba(76, 175, 80, 0.05);
+  background: rgba(76, 175, 80, 0.1);
 }
 
 .history-table tr.incorrect {
-  background: rgba(244, 67, 54, 0.05);
+  background: rgba(244, 67, 54, 0.1);
 }
 
 .history-table .feedback {
@@ -309,12 +358,90 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
 .stats-page .empty {
   text-align: center;
-  color: #888;
+  color: var(--text-muted);
   padding: 2rem;
+}
+
+/* Login Button Styles */
+.btn-login {
+  padding: 0.4rem 1rem;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-login:hover {
+  background: var(--accent-hover);
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-name {
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.btn-logout {
+  padding: 0.3rem 0.6rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* MyPage Button */
+.btn-mypage {
+  padding: 0.3rem 0.6rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.btn-mypage:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+/* Admin Button */
+.btn-admin {
+  padding: 0.3rem 0.6rem;
+  background: rgba(220, 53, 69, 0.3);
+  color: #fff;
+  border: 1px solid rgba(220, 53, 69, 0.5);
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.btn-admin:hover {
+  background: rgba(220, 53, 69, 0.5);
+  border-color: rgba(220, 53, 69, 0.8);
 }

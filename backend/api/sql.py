@@ -1,6 +1,6 @@
 # backend/api/sql.py
 """SQL 실행 API"""
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from backend.schemas.submission import (
@@ -9,6 +9,7 @@ from backend.schemas.submission import (
 )
 from backend.services.sql_service import execute_sql
 from backend.services.grading_service import grade_submission, get_hint
+from backend.api.auth import get_session
 
 
 router = APIRouter(prefix="/sql", tags=["sql"])
@@ -46,13 +47,22 @@ async def execute_query(request: SQLExecuteRequest):
 
 
 @router.post("/submit", response_model=SubmitResponse)
-async def submit_answer(request: SubmitRequest):
+async def submit_answer(request: SubmitRequest, req: Request):
     """문제 제출 및 채점"""
+    # 세션에서 user_id 추출
+    user_id = None
+    session_id = req.cookies.get("session_id")
+    if session_id:
+        session = get_session(session_id)
+        if session and session.get("user"):
+            user_id = session["user"].get("id")
+    
     return grade_submission(
         problem_id=request.problem_id,
         sql=request.sql,
         data_type=getattr(request, 'data_type', 'pa'),
-        note=request.note
+        note=request.note,
+        user_id=user_id
     )
 
 

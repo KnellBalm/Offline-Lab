@@ -1,10 +1,11 @@
 # problems/generator_stream.py
-"""Stream 문제 생성기"""
+"""Stream 문제 생성기 - 월별 JSON + 정답 통합"""
 from __future__ import annotations
 
 import json
 import os
 from datetime import date
+from pathlib import Path
 from typing import List
 
 from engine.postgres_engine import PostgresEngine
@@ -13,7 +14,8 @@ from common.logging import get_logger
 
 logger = get_logger(__name__)
 
-GRADING_SCHEMA = "grading"
+PROBLEM_DIR = Path("problems/monthly")
+PROBLEM_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_stream_data_summary(pg: PostgresEngine) -> str:
@@ -105,9 +107,62 @@ def build_stream_prompt(data_summary: str, n: int = 6) -> str:
 """.strip()
 
 
+def get_expected_result(pg: PostgresEngine, answer_sql: str, limit: int = 1000) -> list:
+    """정답 SQL 실행하여 결과 데이터 반환"""
+    try:
+        # 세미콜론 제거 (서브쿼리 감싸기 위해)
+        clean_sql = answer_sql.strip().rstrip(";")
+        limited_sql = f"SELECT * FROM ({clean_sql}) AS _result LIMIT {limit}"
+        df = pg.fetch_df(limited_sql)
+        
+        result = []
+        for _, row in df.iterrows():
+            record = {}
+            for col in df.columns:
+                val = row[col]
+                if hasattr(val, 'isoformat'):
+                    record[col] = val.isoformat()
+                elif hasattr(val, 'item'):
+                    record[col] = val.item()
+                else:
+                    record[col] = val
+            result.append(record)
+        
+        return result
+    except Exception as e:
+        logger.error(f"Failed to get expected result: {e}")
+        return []
+
+
+def load_monthly_file(month_str: str) -> dict:
+    """월별 JSON 파일 로드"""
+    path = PROBLEM_DIR / f"stream_{month_str}.json"
+    if path.exists():
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"month": month_str, "problems": []}
+
+
+def save_monthly_file(month_str: str, data: dict):
+    """월별 JSON 파일 저장"""
+    path = PROBLEM_DIR / f"stream_{month_str}.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    logger.info(f"saved monthly stream file to {path}")
+
+
 def generate_stream_problems(target_date: date, pg: PostgresEngine) -> str:
-    """Stream 문제 생성"""
+    """Stream 문제 생성 - 월별 JSON에 누적"""
     logger.info("generating stream problems for %s", target_date)
+    
+    month_str = target_date.strftime("%Y-%m")
+    monthly_data = load_monthly_file(month_str)
+    
+    # 오늘 날짜 문제가 이미 있는지 확인
+    existing_dates = set(p.get("date") for p in monthly_data["problems"])
+    if target_date.isoformat() in existing_dates:
+        logger.info(f"stream problems for {target_date} already exist, skipping")
+        return str(PROBLEM_DIR / f"stream_{month_str}.json")
     
     # 데이터 요약
     data_summary = get_stream_data_summary(pg)
@@ -118,34 +173,44 @@ def generate_stream_problems(target_date: date, pg: PostgresEngine) -> str:
     problems = call_gemini_json(prompt)
     logger.info("generated %d stream problems from Gemini", len(problems))
     
-    # grading 스키마에 expected 테이블 생성
-    pg.execute(f"CREATE SCHEMA IF NOT EXISTS {GRADING_SCHEMA}")
-    
+    # 문제에 메타데이터 및 정답 결과 추가
     for p in problems:
-        table = f"{GRADING_SCHEMA}.expected_{p['problem_id']}"
+        original_id = p["problem_id"]
+        p["problem_id"] = f"{target_date}_{original_id}"
+        p["date"] = target_date.isoformat()
+        p["data_type"] = "stream"
+        
+        # XP 값 설정
+        if "xp_value" not in p:
+            diff = p.get("difficulty", "medium")
+            if diff == "easy":
+                p["xp_value"] = 3
+            elif diff == "medium":
+                p["xp_value"] = 5
+            else:
+                p["xp_value"] = 8
+        
+        # 정답 결과 데이터 생성 (JSON에 직접 저장)
         answer_sql = p.get("answer_sql")
-        
-        if not answer_sql:
+        if answer_sql:
+            expected_result = get_expected_result(pg, answer_sql)
+            p["expected_result"] = expected_result
+            p["expected_row_count"] = len(expected_result)
+            logger.info(f"generated expected_result for {p['problem_id']} with {len(expected_result)} rows")
+        else:
             logger.warning("answer_sql missing for %s", p['problem_id'])
-            continue
-        
-        try:
-            pg.execute(f"DROP TABLE IF EXISTS {table}")
-            pg.execute(f"CREATE TABLE {table} AS {answer_sql}")
-            
-            df = pg.fetch_df(f"SELECT COUNT(*) as cnt FROM {table}")
-            row_count = int(df.iloc[0]["cnt"])
-            logger.info("created %s with %d rows", table, row_count)
-            
-            p["expected_meta"] = {"grading_table": f"expected_{p['problem_id']}"}
-        except Exception as e:
-            logger.warning("failed to create expected table for %s: %s", p['problem_id'], e)
+            p["expected_result"] = []
+            p["expected_row_count"] = 0
     
-    # 파일 저장
+    # 월별 파일에 추가
+    monthly_data["problems"].extend(problems)
+    save_monthly_file(month_str, monthly_data)
+    
+    # 기존 daily 폴더 호환을 위해 저장
     os.makedirs("problems/daily", exist_ok=True)
-    path = f"problems/daily/stream_{target_date.isoformat()}.json"
-    with open(path, "w", encoding="utf-8") as f:
+    daily_path = f"problems/daily/stream_{target_date.isoformat()}.json"
+    with open(daily_path, "w", encoding="utf-8") as f:
         json.dump(problems, f, ensure_ascii=False, indent=2)
     
-    logger.info("saved stream problems to %s", path)
-    return path
+    logger.info("saved stream problems to %s", daily_path)
+    return str(PROBLEM_DIR / f"stream_{month_str}.json")

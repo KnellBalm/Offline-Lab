@@ -2,6 +2,7 @@
 import Editor, { type Monaco } from '@monaco-editor/react';
 import { useCallback, useRef, useEffect } from 'react';
 import type { editor } from 'monaco-editor';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SQLEditorProps {
     value: string;
@@ -12,6 +13,7 @@ interface SQLEditorProps {
 }
 
 export function SQLEditor({ value, onChange, onExecute, height = '200px', tables = [] }: SQLEditorProps) {
+    const { theme } = useTheme();
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const monacoRef = useRef<Monaco | null>(null);
     const onExecuteRef = useRef(onExecute);
@@ -197,16 +199,45 @@ export function SQLEditor({ value, onChange, onExecute, height = '200px', tables
                         ? tablesRef.current.filter(t => usedTables.has(t.table_name.toLowerCase()))
                         : tablesRef.current;
 
+                    // 중복 컬럼 찾기
+                    const columnCount = new Map<string, string[]>();
                     tablesToShow.forEach(t => {
                         t.columns.forEach(c => {
-                            push({
-                                label: c.column_name,
-                                kind: monaco.languages.CompletionItemKind.Field,
-                                insertText: c.column_name,
-                                detail: `${t.table_name}`,  // 어느 테이블 컬럼인지 표시
-                                range,
-                                sortText: `1_${c.column_name}`
-                            });
+                            const colName = c.column_name.toLowerCase();
+                            if (!columnCount.has(colName)) {
+                                columnCount.set(colName, []);
+                            }
+                            columnCount.get(colName)!.push(t.table_name);
+                        });
+                    });
+
+                    // 컬럼 추가 (중복 컬럼은 table.column 형태로)
+                    tablesToShow.forEach(t => {
+                        t.columns.forEach(c => {
+                            const colName = c.column_name.toLowerCase();
+                            const tables = columnCount.get(colName) || [];
+
+                            if (tables.length > 1) {
+                                // 중복 컬럼: table.column 형태로 추가
+                                push({
+                                    label: `${t.table_name}.${c.column_name}`,
+                                    kind: monaco.languages.CompletionItemKind.Field,
+                                    insertText: `${t.table_name}.${c.column_name}`,
+                                    detail: `Column (${tables.length} tables)`,
+                                    range,
+                                    sortText: `1_${c.column_name}`
+                                });
+                            } else {
+                                // 유일 컬럼: 그냥 컬럼 이름만
+                                push({
+                                    label: c.column_name,
+                                    kind: monaco.languages.CompletionItemKind.Field,
+                                    insertText: c.column_name,
+                                    detail: `${t.table_name}`,
+                                    range,
+                                    sortText: `1_${c.column_name}`
+                                });
+                            }
                         });
                     });
 
@@ -280,7 +311,7 @@ export function SQLEditor({ value, onChange, onExecute, height = '200px', tables
             <Editor
                 height={height}
                 defaultLanguage="sql"
-                theme="vs-dark"
+                theme={theme === 'dark' ? 'vs-dark' : 'light'}
                 value={value}
                 onChange={(val) => onChange(val || '')}
                 onMount={handleMount}

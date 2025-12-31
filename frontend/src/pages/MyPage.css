@@ -1,0 +1,159 @@
+/* frontend/src/pages/MyPage.css */
+.mypage {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.mypage h1 {
+    color: var(--text-primary);
+    margin: 0 0 2rem;
+}
+
+.profile-section,
+.actions-section {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.profile-section h2 {
+    margin: 0 0 1.5rem;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    box-sizing: border-box;
+}
+
+.form-group input:disabled {
+    background: var(--bg-tertiary);
+    cursor: not-allowed;
+}
+
+.nickname-input {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.nickname-input input {
+    flex: 1;
+}
+
+.nickname-input button {
+    padding: 0.75rem 1.25rem;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.nickname-input button:hover {
+    background: var(--accent-hover);
+}
+
+.nickname-input button:disabled {
+    background: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.message {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.message.success {
+    color: var(--success-color);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.message.error {
+    color: var(--error-color);
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.actions-section {
+    text-align: center;
+}
+
+.btn-logout {
+    padding: 0.75rem 2rem;
+    background: transparent;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-logout:hover {
+    background: var(--error-color);
+    color: white;
+}
+/* 위험 구역 */
+.danger-section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    border-radius: 8px;
+}
+
+.danger-section h2 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    color: var(--error-color);
+}
+
+.warning-text {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.btn-delete-account {
+    padding: 0.75rem 1.5rem;
+    background: var(--error-color);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-delete-account:hover {
+    background: #c82333;
+}
+
+.btn-delete-account:disabled {
+    background: #999;
+    cursor: not-allowed;
+}

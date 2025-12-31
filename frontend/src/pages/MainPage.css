@@ -1,0 +1,313 @@
+/* frontend/src/pages/MainPage.css */
+.main-page {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+/* 히어로 섹션 */
+.hero {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    background: linear-gradient(135deg, var(--accent-color), #6366f1);
+    border-radius: 16px;
+    color: white;
+    margin-bottom: 2rem;
+}
+
+.hero h1 {
+    font-size: 2rem;
+    margin: 0 0 0.5rem;
+}
+
+.hero-subtitle {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.hero-cta {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    display: inline-block;
+    font-size: 0.9rem;
+}
+
+/* 퀵 액션 섹션 */
+.quick-actions-section {
+    margin-bottom: 2rem;
+}
+
+.quick-actions-section h2 {
+    color: var(--text-primary);
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.action-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.action-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+
+.action-card.pa::before {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.action-card.stream::before {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.action-card.practice::before {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.action-card .icon {
+    font-size: 1.75rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.action-card h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+}
+
+.action-card p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.action-card .badge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+    color: var(--text-muted);
+}
+
+/* 메인 콘텐츠 (2컬럼) */
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 리더보드 */
+.leaderboard-section {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.leaderboard-section h2 {
+    margin: 0 0 1rem;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.leaderboard table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard th,
+.leaderboard td {
+    padding: 0.6rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.leaderboard th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.leaderboard td {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.leaderboard tr.highlight {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.leaderboard .rank {
+    width: 40px;
+}
+
+.leaderboard .nickname {
+    font-weight: 600;
+}
+
+.leaderboard .correct {
+    color: var(--success-color);
+}
+
+.leaderboard .streak {
+    color: #f59e0b;
+}
+
+.leaderboard .level {
+    color: var(--accent-color);
+    font-size: 0.8rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state .hint {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+/* SQL 팁 */
+.tips-section {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.tips-section h2 {
+    margin: 0 0 1rem;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.tip-card {
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.tip-card:last-child {
+    margin-bottom: 0;
+}
+
+.tip-card h4 {
+    margin: 0 0 0.5rem;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.tip-card p {
+    margin: 0 0 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.tip-card code {
+    display: block;
+    background: var(--bg-primary);
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--accent-color);
+    overflow-x: auto;
+}
+
+/* 하단 섹션 */
+.footer-section {
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.footer-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+.footer-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.footer-icon {
+    font-size: 1.5rem;
+}
+
+.footer-item h4 {
+    margin: 0 0 0.25rem;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.footer-item p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+/* 모바일 대응 */
+@media (max-width: 600px) {
+    .main-page {
+        padding: 1rem;
+    }
+
+    .hero {
+        padding: 2rem 1rem;
+    }
+
+    .hero h1 {
+        font-size: 1.5rem;
+    }
+
+    .quick-actions {
+        grid-template-columns: 1fr;
+    }
+}

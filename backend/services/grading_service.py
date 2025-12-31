@@ -9,29 +9,40 @@ import pandas as pd
 
 from backend.services.database import postgres_connection
 from backend.schemas.submission import SubmitResponse
+from backend.services.db_logger import db_log, LogCategory, LogLevel
 
 GRADING_SCHEMA = "grading"
 
 
 def load_problem(problem_id: str, data_type: str) -> Optional[dict]:
-    """문제 로드"""
+    """문제 로드 - 모든 세트 파일 검색"""
     today = date.today().isoformat()
+    
+    # 검색할 파일 경로들
     if data_type == "stream":
-        path = Path(f"problems/stream_daily/{today}.json")
+        paths = [Path(f"problems/daily/stream_{today}.json")]
     else:
-        path = Path(f"problems/daily/{today}.json")
+        # 다중 세트 파일들도 검색
+        paths = [
+            Path(f"problems/daily/{today}.json"),
+            Path(f"problems/daily/{today}_set0.json"),
+            Path(f"problems/daily/{today}_set1.json"),
+            Path(f"problems/daily/{today}_set2.json"),
+        ]
     
-    if not path.exists():
-        return None
+    for path in paths:
+        if not path.exists():
+            continue
+        
+        try:
+            problems = json.loads(path.read_text(encoding="utf-8"))
+            for p in problems:
+                if p.get("problem_id") == problem_id:
+                    return p
+        except Exception:
+            continue
     
-    try:
-        problems = json.loads(path.read_text(encoding="utf-8"))
-        for p in problems:
-            if p.get("problem_id") == problem_id:
-                return p
-        return None
-    except Exception:
-        return None
+    return None
 
 
 def compare_results(user_df: pd.DataFrame, expected_df: pd.DataFrame, sort_keys: list = None) -> tuple[bool, str]:
@@ -103,7 +114,8 @@ def grade_submission(
     problem_id: str,
     sql: str,
     data_type: str = "pa",
-    note: Optional[str] = None
+    note: Optional[str] = None,
+    user_id: Optional[str] = None
 ) -> SubmitResponse:
     """문제 제출 채점 - grading 스키마 테이블 비교 방식"""
     start = time.time()
@@ -121,27 +133,31 @@ def grade_submission(
             )
         
         sort_keys = problem.get("sort_keys", [])
-        expected_meta = problem.get("expected_meta", {})
-        grading_table = expected_meta.get("grading_table")
+        expected_result = problem.get("expected_result")
         
-        # 2. grading 테이블 존재 확인
-        if not grading_table:
-            grading_table = f"{GRADING_SCHEMA}.expected_{problem_id}"
-        
+        # 2. 정답 데이터 가져오기
         with postgres_connection() as pg:
             # 사용자 SQL 실행
             user_df = pg.fetch_df(sql.strip().rstrip(";"))
             
-            # grading 테이블에서 정답 로드
-            try:
-                expected_df = pg.fetch_df(f"SELECT * FROM {grading_table}")
-            except Exception as e:
-                return SubmitResponse(
-                    is_correct=False,
-                    feedback=f"정답 테이블을 찾을 수 없습니다: {grading_table}",
-                    execution_time_ms=0,
-                    diff=str(e)
-                )
+            # JSON에서 expected_result 사용
+            if expected_result and len(expected_result) > 0:
+                expected_df = pd.DataFrame(expected_result)
+            else:
+                # 기존 방식: grading 테이블에서 정답 로드 (하위 호환성)
+                expected_meta = problem.get("expected_meta", {})
+                grading_table = expected_meta.get("grading_table")
+                if not grading_table:
+                    grading_table = f"{GRADING_SCHEMA}.expected_{problem_id}"
+                try:
+                    expected_df = pg.fetch_df(f"SELECT * FROM {grading_table}")
+                except Exception as e:
+                    return SubmitResponse(
+                        is_correct=False,
+                        feedback=f"정답 데이터를 찾을 수 없습니다.",
+                        execution_time_ms=0,
+                        diff=str(e)
+                    )
         
         # 3. 결과 비교
         is_correct, feedback = compare_results(user_df, expected_df, sort_keys)
@@ -153,7 +169,24 @@ def grade_submission(
             data_type=data_type,
             sql_text=sql,
             is_correct=is_correct,
-            feedback=feedback
+            feedback=feedback,
+            user_id=user_id
+        )
+        
+        # 5. 정답 시 XP 지급 (문제의 xp_value 또는 기본값 5)
+        if is_correct and user_id:
+            xp_value = problem.get("xp_value", 5)
+            award_xp(user_id, xp_value)
+            feedback += f" (+{xp_value} XP)"
+        
+        # 6. 로깅
+        result_text = "정답" if is_correct else "오답"
+        db_log(
+            category=LogCategory.USER_ACTION,
+            message=f"문제 제출: {problem_id} ({result_text})",
+            level=LogLevel.INFO,
+            source="grading_service",
+            user_id=user_id
         )
         
         elapsed = (time.time() - start) * 1000
@@ -174,7 +207,8 @@ def grade_submission(
             data_type=data_type,
             sql_text=sql,
             is_correct=False,
-            feedback=feedback
+            feedback=feedback,
+            user_id=user_id
         )
         
         return SubmitResponse(
@@ -206,7 +240,8 @@ def save_submission_pg(
     data_type: str,
     sql_text: str,
     is_correct: bool,
-    feedback: str
+    feedback: str,
+    user_id: str = None
 ):
     """제출 기록 저장 (PostgreSQL)"""
     try:
@@ -221,14 +256,36 @@ def save_submission_pg(
                     sql_text TEXT,
                     is_correct BOOLEAN,
                     feedback TEXT,
+                    user_id VARCHAR(100),
+                    xp_earned INTEGER DEFAULT 0,
                     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            # user_id, xp_earned 컬럼 추가 (기존 테이블 호환)
+            pg.execute("ALTER TABLE submissions ADD COLUMN IF NOT EXISTS user_id VARCHAR(100)")
+            pg.execute("ALTER TABLE submissions ADD COLUMN IF NOT EXISTS xp_earned INTEGER DEFAULT 0")
             
             pg.execute("""
-                INSERT INTO submissions (session_date, problem_id, data_type, sql_text, is_correct, feedback)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (session_date, problem_id, data_type, sql_text, is_correct, feedback))
+                INSERT INTO submissions (session_date, problem_id, data_type, sql_text, is_correct, feedback, user_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (session_date, problem_id, data_type, sql_text, is_correct, feedback, user_id))
     except Exception:
         pass
 
+
+def award_xp(user_id: str, xp_amount: int):
+    """XP 지급 및 레벨업 처리"""
+    if not user_id or xp_amount <= 0:
+        return
+    
+    try:
+        with postgres_connection() as pg:
+            # XP 추가 및 레벨 계산 (100 XP당 1레벨)
+            pg.execute("""
+                UPDATE users 
+                SET xp = xp + %s,
+                    level = ((xp + %s) / 100) + 1
+                WHERE id = %s
+            """, (xp_amount, xp_amount, user_id))
+    except Exception:
+        pass

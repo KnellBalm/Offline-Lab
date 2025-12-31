@@ -3,7 +3,8 @@
 from datetime import date
 import json
 import os
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Request, Depends, Query
 
 from backend.schemas.admin import (
     SystemStatus, SchedulerStatus, DatabaseTable, TodayProblemsStatus,
@@ -11,14 +12,41 @@ from backend.schemas.admin import (
     RefreshDataRequest, RefreshDataResponse
 )
 from backend.services.database import postgres_connection, duckdb_connection
+from backend.api.auth import get_session
+from backend.services.db_logger import get_logs, db_log, LogCategory, LogLevel
 
+
+async def require_admin(request: Request):
+    """관리자 권한 체크"""
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        raise HTTPException(403, "관리자 권한이 필요합니다")
+    
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(403, "관리자 권한이 필요합니다")
+    
+    user_email = session.get("user", {}).get("email", "")
+    
+    # DB에서 is_admin 확인
+    try:
+        with postgres_connection() as pg:
+            df = pg.fetch_df("SELECT is_admin FROM users WHERE email = %s", [user_email])
+            if len(df) == 0 or not df.iloc[0].get('is_admin', False):
+                raise HTTPException(403, "관리자 권한이 필요합니다")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(403, "관리자 권한이 필요합니다")
+    
+    return session
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 @router.get("/status", response_model=SystemStatus)
-async def get_system_status():
+async def get_system_status(admin=Depends(require_admin)):
     """시스템 상태 조회"""
     # PostgreSQL 연결 확인
     postgres_connected = False
@@ -292,3 +320,124 @@ async def get_scheduler_status():
         return {"success": False, "message": str(e), "running": False}
 
 
+@router.post("/reset-submissions")
+async def reset_submissions(admin=Depends(require_admin)):
+    """제출 기록 초기화 및 XP 리셋"""
+    try:
+        with postgres_connection() as pg:
+            pg.execute("TRUNCATE TABLE submissions RESTART IDENTITY")
+            pg.execute("UPDATE users SET xp = 0, level = 1")
+        
+        return {
+            "success": True,
+            "message": "모든 제출 기록이 초기화되었습니다."
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"초기화 실패: {str(e)}"
+        }
+
+@router.get("/logs")
+async def get_system_logs(
+    admin=Depends(require_admin),
+    category: Optional[str] = Query(None, description="로그 카테고리"),
+    level: Optional[str] = Query(None, description="로그 레벨"),
+    limit: int = Query(100, description="조회 개수")
+):
+    """시스템 로그 조회"""
+    logs = get_logs(category=category, level=level, limit=limit)
+    return {
+        "success": True,
+        "logs": logs,
+        "count": len(logs)
+    }
+
+
+@router.get("/log-categories")
+async def get_log_categories(admin=Depends(require_admin)):
+    """로그 카테고리 목록"""
+    return {
+        "categories": [
+            {"id": "problem_generation", "name": "문제 생성", "icon": "🤖"},
+            {"id": "user_action", "name": "사용자 액션", "icon": "👤"},
+            {"id": "scheduler", "name": "스케줄러", "icon": "⏰"},
+            {"id": "system", "name": "시스템", "icon": "🖥️"},
+            {"id": "api", "name": "API", "icon": "🔌"}
+        ]
+    }
+
+
+@router.get("/users")
+async def get_all_users(admin=Depends(require_admin)):
+    """전체 사용자 목록 조회"""
+    try:
+        with postgres_connection() as pg:
+            df = pg.fetch_df("""
+                SELECT id, email, name, nickname, xp, level, is_admin, created_at
+                FROM users
+                ORDER BY created_at DESC
+            """)
+            users = []
+            for _, row in df.iterrows():
+                users.append({
+                    "id": row["id"],
+                    "email": row["email"],
+                    "name": row["name"],
+                    "nickname": row["nickname"],
+                    "xp": int(row.get("xp", 0)),
+                    "level": int(row.get("level", 1)),
+                    "is_admin": bool(row.get("is_admin", False)),
+                    "created_at": row["created_at"].isoformat() if row["created_at"] else None
+                })
+            return {"success": True, "users": users, "count": len(users)}
+    except Exception as e:
+        return {"success": False, "message": str(e), "users": []}
+
+
+@router.patch("/users/{user_id}/admin")
+async def toggle_user_admin(user_id: str, admin=Depends(require_admin)):
+    """사용자 관리자 권한 토글"""
+    try:
+        with postgres_connection() as pg:
+            # 현재 상태 조회
+            df = pg.fetch_df("SELECT is_admin FROM users WHERE id = %s", [user_id])
+            if len(df) == 0:
+                return {"success": False, "message": "사용자를 찾을 수 없습니다"}
+            
+            current_admin = bool(df.iloc[0].get("is_admin", False))
+            new_admin = not current_admin
+            
+            pg.execute("UPDATE users SET is_admin = %s WHERE id = %s", [new_admin, user_id])
+            
+            db_log(
+                category=LogCategory.SYSTEM,
+                message=f"사용자 관리자 권한 변경: {user_id} -> {'관리자' if new_admin else '일반'}",
+                level=LogLevel.INFO,
+                source="admin_api"
+            )
+            
+            return {"success": True, "is_admin": new_admin}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(user_id: str, admin=Depends(require_admin)):
+    """사용자 삭제"""
+    try:
+        with postgres_connection() as pg:
+            pg.execute("DELETE FROM submissions WHERE user_id = %s", [user_id])
+            pg.execute("DELETE FROM user_problem_sets WHERE user_id = %s", [user_id])
+            pg.execute("DELETE FROM users WHERE id = %s", [user_id])
+            
+            db_log(
+                category=LogCategory.SYSTEM,
+                message=f"사용자 삭제: {user_id}",
+                level=LogLevel.WARNING,
+                source="admin_api"
+            )
+            
+            return {"success": True, "message": "사용자가 삭제되었습니다"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}

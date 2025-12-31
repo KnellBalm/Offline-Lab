@@ -32,9 +32,11 @@ def get_user_stats() -> UserStats:
         max_streak=streak["max"],
         level=level_info["name"],
         total_solved=total,
-        correct=correct,
+        correct=level_info.get("correct", correct),
         accuracy=round(accuracy, 1),
-        next_level_threshold=level_info["next"]
+        next_level_threshold=level_info["next"],
+        score=level_info.get("score", 0),
+        level_progress=level_info.get("progress", 0)
     )
 
 
@@ -68,37 +70,70 @@ def get_streak() -> dict:
 
 
 def get_level() -> dict:
-    """레벨 계산"""
+    """점수 기반 레벨 계산 (난이도별 차등 점수)"""
+    # 난이도별 점수: easy=10, medium=25, hard=50
+    DIFFICULTY_SCORES = {
+        'easy': 10,
+        'medium': 25,
+        'hard': 50
+    }
+    
     try:
         with postgres_connection() as pg:
+            # 정답인 제출의 점수 합계 계산
             df = pg.fetch_df("""
-                SELECT SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct
+                SELECT 
+                    COALESCE(SUM(
+                        CASE difficulty
+                            WHEN 'easy' THEN 10
+                            WHEN 'medium' THEN 25
+                            WHEN 'hard' THEN 50
+                            ELSE 25
+                        END
+                    ), 0) as total_score,
+                    COUNT(*) as correct_count
                 FROM submissions
+                WHERE is_correct = true
             """)
-        correct = int(df.iloc[0]["correct"]) if len(df) > 0 and df.iloc[0]["correct"] else 0
+        total_score = int(df.iloc[0]["total_score"]) if len(df) > 0 else 0
+        correct_count = int(df.iloc[0]["correct_count"]) if len(df) > 0 else 0
     except Exception:
-        correct = 0
+        total_score = 0
+        correct_count = 0
     
+    # 점수 기반 레벨 체계
     levels = [
         (0, "🌱 Beginner"),
-        (5, "🌿 Learner"),
-        (15, "🌳 Analyst"),
-        (30, "⭐ Senior"),
-        (50, "🏆 Expert"),
-        (100, "👑 Master")
+        (50, "🌿 Learner"),
+        (150, "🌳 Analyst"),
+        (400, "⭐ Senior"),
+        (800, "🏆 Expert"),
+        (1500, "👑 Master")
     ]
     
     level_name = "🌱 Beginner"
-    next_threshold = 5
+    next_threshold = 50
+    current_threshold = 0
     
     for threshold, name in levels:
-        if correct >= threshold:
+        if total_score >= threshold:
             level_name = name
+            current_threshold = threshold
         else:
             next_threshold = threshold
             break
+    else:
+        # Master 레벨 달성 시
+        next_threshold = total_score
     
-    return {"name": level_name, "correct": correct, "next": next_threshold}
+    return {
+        "name": level_name,
+        "score": total_score,
+        "correct": correct_count,
+        "next": next_threshold,
+        "current": current_threshold,
+        "progress": min(100, int((total_score - current_threshold) / max(1, next_threshold - current_threshold) * 100)) if next_threshold > current_threshold else 100
+    }
 
 
 def get_submission_history(limit: int = 20, data_type: str = None) -> List[SubmissionHistory]:

@@ -1,0 +1,253 @@
+[
+  {
+    "problem_id": "startup_sql_001",
+    "difficulty": "easy",
+    "topic": "engagement",
+    "requester": "경영진",
+    "question": "안녕하세요, 데이터팀. 12월 첫째 주(12/1~12/7)의 일간 활성 사용자(DAU)와 콘텐츠 조회수(read_content 이벤트 기준) 추이를 보고 싶습니다. 우리 플랫폼의 일일 사용자 활성도 현황을 빠르게 파악하고 싶네요.",
+    "context": "일별 핵심 지표 모니터링은 플랫폼의 건강 상태를 진단하는 가장 기본적인 방법입니다. 경영진은 이 데이터를 통해 주간 성과를 리뷰하고, 중요한 비즈니스 의사결정의 기초 자료로 활용합니다.",
+    "submission_requirements": "결과는 'analysis_date' 컬럼을 기준으로 오름차순 정렬해주세요. 컬럼명은 'analysis_date', 'dau', 'content_reads'로 지정해야 합니다.",
+    "answer_sql": "SELECT \n    DATE(event_time) AS analysis_date,\n    COUNT(DISTINCT user_id) AS dau,\n    COUNT(CASE WHEN event_name = 'read_content' THEN 1 END) AS content_reads\nFROM \n    pa_events\nWHERE \n    event_time >= '2025-12-01' AND event_time < '2025-12-08'\nGROUP BY \n    analysis_date\nORDER BY \n    analysis_date ASC;",
+    "expected_description": "2025년 12월 1일부터 7일까지 각 날짜별 순수 방문자 수(DAU)와 'read_content' 이벤트가 발생한 총 횟수를 보여주는 테이블입니다.",
+    "expected_columns": [
+      "analysis_date",
+      "dau",
+      "content_reads"
+    ],
+    "sort_keys": [
+      "analysis_date"
+    ],
+    "hint": "DATE() 함수를 사용하여 타임스탬프에서 날짜 부분만 추출할 수 있습니다. DAU는 COUNT(DISTINCT user_id)로, 콘텐츠 조회수는 조건부 집계(CASE WHEN)를 사용하여 계산하세요.",
+    "expected_meta": {
+      "row_count": 7,
+      "columns": [
+        {
+          "name": "analysis_date",
+          "type": "date"
+        },
+        {
+          "name": "dau",
+          "type": "bigint"
+        },
+        {
+          "name": "content_reads",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_001"
+    }
+  },
+  {
+    "problem_id": "startup_sql_002",
+    "difficulty": "easy",
+    "topic": "segmentation",
+    "requester": "마케팅팀",
+    "question": "최근 한 달(11/25~12/25)간 유입된 신규 가입자의 유입 채널(channel)별 분포를 확인하고 싶습니다. 어떤 채널에서 가장 많은 사용자가 유입되었는지 파악하여 마케팅 예산을 효율적으로 분배하고 싶습니다.",
+    "context": "마케팅 채널별 성과 측정(Channel Performance)은 광고 캠페인의 효율성을 평가하고 최적화하는 데 필수적입니다. 이 분석을 통해 고성과 채널에 집중하고 저성과 채널의 전략을 재검토할 수 있습니다.",
+    "submission_requirements": "결과는 'user_count' 컬럼 기준으로 내림차순 정렬해주세요. 컬럼명은 'channel', 'user_count'로 지정해야 합니다.",
+    "answer_sql": "SELECT\n    channel,\n    COUNT(user_id) AS user_count\nFROM\n    pa_users\nWHERE\n    signup_at >= '2025-11-25' AND signup_at <= '2025-12-25'\nGROUP BY\n    channel\nORDER BY\n    user_count DESC;",
+    "expected_description": "2025년 11월 25일부터 12월 25일까지 가입한 사용자들을 대상으로, 각 유입 채널(channel)별 가입자 수를 집계한 테이블입니다.",
+    "expected_columns": [
+      "channel",
+      "user_count"
+    ],
+    "sort_keys": [
+      "user_count"
+    ],
+    "hint": "pa_users 테이블을 사용하여 가입일(signup_at)을 필터링하고, 채널(channel)별로 그룹화하여 사용자 수를 세면 됩니다.",
+    "expected_meta": {
+      "row_count": 4,
+      "columns": [
+        {
+          "name": "channel",
+          "type": "text"
+        },
+        {
+          "name": "user_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_002"
+    }
+  },
+  {
+    "problem_id": "startup_sql_003",
+    "difficulty": "medium",
+    "topic": "activation",
+    "requester": "PM팀",
+    "question": "12월 가입자들이 가입 이후 보인 일자별 콘텐츠 완독률(Content Completion Rate)을 분석해주세요. 콘텐츠 완독은 저희 플랫폼의 핵심 활성화 지표(Activation)입니다. 신규 유저들이 얼마나 빠르게 우리 콘텐츠의 가치를 경험하는지 확인하고 싶습니다.",
+    "context": "콘텐츠 완독률은 사용자가 콘텐츠에 얼마나 몰입했는지를 나타내는 중요한 지표입니다. 특히 신규 사용자의 초기 완독 경험은 리텐션에 큰 영향을 미칩니다. 이 지표를 통해 온보딩 과정이나 콘텐츠 추천 알고리즘의 효과를 측정할 수 있습니다.",
+    "submission_requirements": "결과는 'analysis_date' 기준 오름차순으로 정렬해주세요. 완독률(completion_rate)은 소수점 둘째 자리까지 반올림하고, 컬럼명은 'analysis_date', 'read_starts', 'read_completions', 'completion_rate'로 지정해야 합니다. 기간은 12월 전체(12/1~12/25)로 설정해주세요.",
+    "answer_sql": "WITH dec_signups AS (\n    SELECT user_id\n    FROM pa_users\n    WHERE signup_at >= '2025-12-01' AND signup_at < '2025-12-26'\n)\nSELECT\n    DATE(e.event_time) AS analysis_date,\n    COUNT(CASE WHEN e.event_name = 'read_content' THEN 1 END) AS read_starts,\n    COUNT(CASE WHEN e.event_name = 'scroll_100' THEN 1 END) AS read_completions,\n    ROUND(\n        COUNT(CASE WHEN e.event_name = 'scroll_100' THEN 1 END) * 100.0 / \n        NULLIF(COUNT(CASE WHEN e.event_name = 'read_content' THEN 1 END), 0),\n        2\n    ) AS completion_rate\nFROM\n    pa_events e\nJOIN\n    dec_signups d ON e.user_id = d.user_id\nWHERE \n    e.event_time >= '2025-12-01' AND e.event_time < '2025-12-26'\nGROUP BY\n    analysis_date\nORDER BY\n    analysis_date ASC;",
+    "expected_description": "2025년 12월에 가입한 사용자들이 12월 동안 보인 행동을 날짜별로 집계한 테이블입니다. 각 날짜별로 콘텐츠 읽기 시작('read_content') 수, 콘텐츠 완독('scroll_100') 수, 그리고 완독률을 보여줍니다.",
+    "expected_columns": [
+      "analysis_date",
+      "read_starts",
+      "read_completions",
+      "completion_rate"
+    ],
+    "sort_keys": [
+      "analysis_date"
+    ],
+    "hint": "WITH절(CTE)을 사용해 12월 가입자 목록을 먼저 만든 후, pa_events 테이블과 조인하세요. 완독률은 (완독 수 / 읽기 시작 수)로 계산하며, 분모가 0이 되는 경우를 방지하기 위해 NULLIF 함수를 사용하는 것이 좋습니다.",
+    "expected_meta": {
+      "row_count": 25,
+      "columns": [
+        {
+          "name": "analysis_date",
+          "type": "date"
+        },
+        {
+          "name": "read_starts",
+          "type": "bigint"
+        },
+        {
+          "name": "read_completions",
+          "type": "bigint"
+        },
+        {
+          "name": "completion_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_003"
+    }
+  },
+  {
+    "problem_id": "startup_sql_004",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "그로스팀",
+    "question": "사용자들이 콘텐츠를 소비할 때 어느 구간에서 가장 많이 이탈하는지 파악하고 싶습니다. 12월 1일부터 15일까지 발생한 콘텐츠 소비 깔때기(Funnel)를 분석해주세요. 스크롤 깊이(scroll depth) 분포를 통해 콘텐츠 소비 경험을 개선할 부분을 찾고 싶습니다.",
+    "context": "스크롤 깊이 분석은 사용자가 콘텐츠의 어느 지점까지 흥미를 유지하는지 보여주는 지표입니다. 특정 깊이에서 이탈률이 높다면, 해당 부분의 콘텐츠 구성이나 UI/UX에 문제가 있을 수 있음을 시사합니다. 이를 개선하여 사용자의 완독률을 높일 수 있습니다.",
+    "submission_requirements": "결과는 단일 행으로, 각 스크롤 깊이에 도달한 유니크 세션(unique session) 수를 보여주어야 합니다. 컬럼명은 'read_content_sessions', 'scroll_25_sessions', 'scroll_50_sessions', 'scroll_75_sessions', 'scroll_100_sessions'로 지정해주세요.",
+    "answer_sql": "SELECT\n    COUNT(DISTINCT CASE WHEN event_name = 'read_content' THEN session_id END) AS read_content_sessions,\n    COUNT(DISTINCT CASE WHEN event_name = 'scroll_25' THEN session_id END) AS scroll_25_sessions,\n    COUNT(DISTINCT CASE WHEN event_name = 'scroll_50' THEN session_id END) AS scroll_50_sessions,\n    COUNT(DISTINCT CASE WHEN event_name = 'scroll_75' THEN session_id END) AS scroll_75_sessions,\n    COUNT(DISTINCT CASE WHEN event_name = 'scroll_100' THEN session_id END) AS scroll_100_sessions\nFROM\n    pa_events\nWHERE\n    event_time >= '2025-12-01' AND event_time < '2025-12-16'\n    AND event_name IN ('read_content', 'scroll_25', 'scroll_50', 'scroll_75', 'scroll_100');",
+    "expected_description": "2025년 12월 1일부터 15일까지 기간 동안, 콘텐츠 읽기를 시작한 세션 수와 각 스크롤 깊이(25%, 50%, 75%, 100%)에 도달한 고유 세션 수를 집계한 테이블입니다.",
+    "expected_columns": [
+      "read_content_sessions",
+      "scroll_25_sessions",
+      "scroll_50_sessions",
+      "scroll_75_sessions",
+      "scroll_100_sessions"
+    ],
+    "sort_keys": [],
+    "hint": "GROUP BY 없이 전체 데이터를 대상으로 조건부 집계(COUNT DISTINCT CASE WHEN ...)를 사용하면 단일 행으로 결과를 출력할 수 있습니다. 분석의 정확도를 위해 IN 절을 사용해 관련 이벤트만 필터링하는 것이 효율적입니다.",
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "read_content_sessions",
+          "type": "bigint"
+        },
+        {
+          "name": "scroll_25_sessions",
+          "type": "bigint"
+        },
+        {
+          "name": "scroll_50_sessions",
+          "type": "bigint"
+        },
+        {
+          "name": "scroll_75_sessions",
+          "type": "bigint"
+        },
+        {
+          "name": "scroll_100_sessions",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_004"
+    }
+  },
+  {
+    "problem_id": "startup_sql_005",
+    "difficulty": "hard",
+    "topic": "segmentation",
+    "requester": "마케팅팀",
+    "question": "12월에 구독(subscribe)한 사용자와 구독하지 않은 활성 사용자 그룹 간의 행동 차이를 분석하고 싶습니다. 사용자 그룹별로 평균 콘텐츠 완독 수, 좋아요 수, 공유 수를 비교하여 구독 전환에 영향을 미치는 핵심 행동이 무엇인지 파악해주세요.",
+    "context": "구독 전환 유저와 비전환 유저의 행동을 비교 분석하면, 어떤 인게이지먼트 활동이 유료 구독으로 이어지는지에 대한 중요한 인사이트를 얻을 수 있습니다. 이를 통해 구독을 유도하는 콘텐츠나 기능을 강화하는 전략을 수립할 수 있습니다.",
+    "submission_requirements": "결과는 'user_segment' 컬럼으로 정렬해주세요. 컬럼명은 'user_segment', 'total_users', 'avg_completions_per_user', 'avg_likes_per_user', 'avg_shares_per_user'로 지정하고, 평균값은 소수점 둘째 자리에서 반올림해주세요. 12월 전체 기간 활성 사용자를 대상으로 합니다.",
+    "answer_sql": "WITH monthly_active_users AS (\n    SELECT DISTINCT user_id\n    FROM pa_events\n    WHERE event_time >= '2025-12-01' AND event_time < '2025-12-26'\n),\nsubscribers AS (\n    SELECT DISTINCT user_id\n    FROM pa_events\n    WHERE event_name = 'subscribe'\n      AND event_time >= '2025-12-01' AND event_time < '2025-12-26'\n),\nuser_segments AS (\n    SELECT\n        m.user_id,\n        CASE WHEN s.user_id IS NOT NULL THEN 'Subscriber' ELSE 'Non-Subscriber' END AS user_segment\n    FROM monthly_active_users m\n    LEFT JOIN subscribers s ON m.user_id = s.user_id\n)\nSELECT\n    us.user_segment,\n    COUNT(DISTINCT us.user_id) AS total_users,\n    ROUND(COUNT(CASE WHEN e.event_name = 'scroll_100' THEN 1 END) * 1.0 / NULLIF(COUNT(DISTINCT us.user_id), 0), 2) AS avg_completions_per_user,\n    ROUND(COUNT(CASE WHEN e.event_name = 'like' THEN 1 END) * 1.0 / NULLIF(COUNT(DISTINCT us.user_id), 0), 2) AS avg_likes_per_user,\n    ROUND(COUNT(CASE WHEN e.event_name = 'share' THEN 1 END) * 1.0 / NULLIF(COUNT(DISTINCT us.user_id), 0), 2) AS avg_shares_per_user\nFROM\n    user_segments us\nJOIN\n    pa_events e ON us.user_id = e.user_id\nWHERE\n    e.event_time >= '2025-12-01' AND e.event_time < '2025-12-26'\nGROUP BY\n    us.user_segment\nORDER BY\n    us.user_segment;",
+    "expected_description": "2025년 12월 활성 사용자를 '구독자'와 '비구독자' 두 그룹으로 나누어, 각 그룹의 총 사용자 수와 사용자당 평균 콘텐츠 완독, 좋아요, 공유 횟수를 비교 분석한 테이블입니다.",
+    "expected_columns": [
+      "user_segment",
+      "total_users",
+      "avg_completions_per_user",
+      "avg_likes_per_user",
+      "avg_shares_per_user"
+    ],
+    "sort_keys": [
+      "user_segment"
+    ],
+    "hint": "여러 개의 CTE를 사용하여 문제를 단계적으로 해결하세요. 1) 12월 활성 사용자 목록, 2) 12월 구독자 목록, 3) LEFT JOIN을 이용해 두 그룹을 구분하는 user_segments CTE를 만듭니다. 마지막으로 이 세그먼트와 이벤트 테이블을 조인하여 그룹별로 행동 지표를 집계합니다. 사용자당 평균 지표를 계산할 때는 `COUNT(DISTINCT user_id)`로 나누어야 정확합니다.",
+    "expected_meta": {
+      "row_count": 2,
+      "columns": [
+        {
+          "name": "user_segment",
+          "type": "text"
+        },
+        {
+          "name": "total_users",
+          "type": "bigint"
+        },
+        {
+          "name": "avg_completions_per_user",
+          "type": "numeric"
+        },
+        {
+          "name": "avg_likes_per_user",
+          "type": "numeric"
+        },
+        {
+          "name": "avg_shares_per_user",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_005"
+    }
+  },
+  {
+    "problem_id": "startup_sql_006",
+    "difficulty": "hard",
+    "topic": "cohort",
+    "requester": "PM팀",
+    "question": "신규 사용자의 첫 경험이 리텐션, 즉 구독 전환에 미치는 영향을 분석하고 싶습니다. 11월 가입자를 대상으로, 가입 후 첫 세션에서 '콘텐츠 완독(scroll_100)'을 경험한 그룹과 그렇지 않은 그룹으로 나누어, 12월 25일까지의 최종 구독률을 비교해주세요.",
+    "context": "사용자의 첫 경험(First Time User Experience, FTUE)은 프로덕트의 성패를 좌우하는 중요한 요소입니다. 'Aha-moment'로 불리는 핵심 가치(콘텐츠 완독)를 첫 세션에서 경험한 사용자는 장기적으로 잔존할 확률이 높습니다. 이 분석은 FTUE 개선의 근거를 마련하는 데 도움을 줍니다.",
+    "submission_requirements": "결과는 'first_session_experience' 컬럼으로 정렬해주세요. 컬럼명은 'first_session_experience', 'total_users', 'subscribed_users', 'subscription_rate'로 지정하고, 구독률은 소수점 둘째 자리에서 반올림해주세요.",
+    "answer_sql": "WITH nov_users AS (\n    SELECT user_id\n    FROM pa_users\n    WHERE signup_at >= '2025-11-01' AND signup_at < '2025-12-01'\n), first_session AS (\n    SELECT\n        user_id,\n        session_id,\n        ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY started_at ASC) as rn\n    FROM pa_sessions\n    WHERE user_id IN (SELECT user_id FROM nov_users)\n), first_session_completion AS (\n    SELECT\n        fs.user_id,\n        MAX(CASE WHEN e.event_name = 'scroll_100' THEN 1 ELSE 0 END) AS completed_in_first_session\n    FROM first_session fs\n    LEFT JOIN pa_events e ON fs.session_id = e.session_id\n    WHERE fs.rn = 1\n    GROUP BY fs.user_id\n), cohort_subscription AS (\n    SELECT\n        fsc.user_id,\n        fsc.completed_in_first_session,\n        MAX(CASE WHEN e.event_name = 'subscribe' THEN 1 ELSE 0 END) AS subscribed\n    FROM first_session_completion fsc\n    LEFT JOIN pa_events e ON fsc.user_id = e.user_id AND e.event_time <= '2025-12-25'\n    GROUP BY fsc.user_id, fsc.completed_in_first_session\n)\nSELECT\n    CASE WHEN completed_in_first_session = 1 THEN 'Completed Content in 1st Session' ELSE 'Did Not Complete in 1st Session' END AS first_session_experience,\n    COUNT(user_id) AS total_users,\n    SUM(subscribed) AS subscribed_users,\n    ROUND(SUM(subscribed) * 100.0 / COUNT(user_id), 2) AS subscription_rate\nFROM cohort_subscription\nGROUP BY first_session_experience\nORDER BY first_session_experience;",
+    "expected_description": "2025년 11월에 가입한 사용자들을 두 그룹(첫 세션에서 콘텐츠 완독 경험 O/X)으로 나누어, 각 그룹의 총 사용자 수, 최종 구독자 수, 그리고 구독 전환율을 비교하는 테이블입니다.",
+    "expected_columns": [
+      "first_session_experience",
+      "total_users",
+      "subscribed_users",
+      "subscription_rate"
+    ],
+    "sort_keys": [
+      "first_session_experience"
+    ],
+    "hint": "이 문제는 여러 단계의 CTE가 필요합니다. 1) 11월 가입자(코호트)를 정의합니다. 2) 윈도우 함수 ROW_NUMBER()를 사용해 각 유저의 첫 번째 세션을 식별합니다. 3) 첫 세션에서 'scroll_100' 이벤트 발생 여부를 기준으로 유저를 그룹화합니다. 4) 각 그룹의 최종 구독 여부를 집계하여 구독률을 계산합니다.",
+    "expected_meta": {
+      "row_count": 2,
+      "columns": [
+        {
+          "name": "first_session_experience",
+          "type": "text"
+        },
+        {
+          "name": "total_users",
+          "type": "bigint"
+        },
+        {
+          "name": "subscribed_users",
+          "type": "bigint"
+        },
+        {
+          "name": "subscription_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_startup_sql_006"
+    }
+  }
+]

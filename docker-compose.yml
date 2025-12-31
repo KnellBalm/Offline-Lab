@@ -8,6 +8,8 @@ services:
       - .env
     environment:
       - DUCKDB_PATH=/app/data/local.duckdb
+      - ENABLE_SCHEDULER=true
+      - RUN_HOUR=0 # UTC 0:00 = KST 9:00
     ports:
       - "15174:8000"
     volumes:
@@ -24,21 +26,21 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-
-  scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: python -m scripts.run_daily
-    env_file:
-      - .env
-    environment:
-      - DUCKDB_PATH=/app/data/local.duckdb
-      - RUN_INTERVAL_HOURS=24
-    volumes:
-      - duckdb_data:/app/data
-      - ./problems:/app/problems
-    restart: unless-stopped
+  # 스케줄러는 이제 백엔드에 내장 (APScheduler)
+  # scheduler:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   command: python -m scripts.run_daily
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - DUCKDB_PATH=/app/data/local.duckdb
+  #     - RUN_INTERVAL_HOURS=24
+  #   volumes:
+  #     - duckdb_data:/app/data
+  #     - ./problems:/app/problems
+  #   restart: unless-stopped
 
 volumes:
   duckdb_data:

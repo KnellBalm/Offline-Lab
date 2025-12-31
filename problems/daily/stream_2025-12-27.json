@@ -1,0 +1,124 @@
+[
+  {
+    "problem_id": "stream_sql_001",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "마케팅팀",
+    "question": "2025년 7월 1일부터 2025년 7월 31일까지의 일별 총 매출액을 확인하고 싶습니다. 매출이 발생한 날짜 순서대로 정렬해주세요.",
+    "context": "마케팅 캠페인 효과를 분석하기 위해 월별 매출 추이를 파악하는 것이 중요합니다.",
+    "submission_requirements": "결과 컬럼은 date (날짜) 와 total_revenue (총 매출액) 두 개로 구성되어야 합니다. date 컬럼을 기준으로 오름차순 정렬해주세요.",
+    "answer_sql": "SELECT date, revenue AS total_revenue FROM stream_daily_metrics WHERE date BETWEEN '2025-07-01' AND '2025-07-31' ORDER BY date ASC;",
+    "expected_columns": [
+      "date",
+      "total_revenue"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "hint": "stream_daily_metrics 테이블의 date와 revenue 컬럼을 활용하세요. 날짜 범위 조건에 BETWEEN을 사용하고, 결과를 date 기준으로 정렬하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_001"
+    }
+  },
+  {
+    "problem_id": "stream_sql_002",
+    "difficulty": "easy",
+    "topic": "channel",
+    "requester": "데이터 분석팀",
+    "question": "가장 많은 구매가 발생한 상위 3개 채널과 각 채널별 구매 수를 알려주세요.",
+    "context": "어떤 마케팅 채널이 가장 효과적인지 파악하여 마케팅 예산을 효율적으로 배분하고자 합니다.",
+    "submission_requirements": "결과 컬럼은 channel (채널명) 과 total_purchases (총 구매 수) 두 개로 구성되어야 합니다. total_purchases 기준으로 내림차순 정렬하여 상위 3개만 보여주세요.",
+    "answer_sql": "SELECT channel, COUNT(session_id) AS total_purchases FROM stream_events WHERE event_name = 'purchase' GROUP BY channel ORDER BY total_purchases DESC LIMIT 3;",
+    "expected_columns": [
+      "channel",
+      "total_purchases"
+    ],
+    "sort_keys": [
+      "total_purchases"
+    ],
+    "hint": "stream_events 테이블에서 event_name이 'purchase'인 데이터를 필터링하고, channel 별로 그룹화하여 구매 수를 집계하세요. 결과를 내림차순 정렬 후 LIMIT 3을 사용하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_002"
+    }
+  },
+  {
+    "problem_id": "stream_sql_003",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "퍼널 분석팀",
+    "question": "상품을 장바구니에 담은 후(add_to_cart) 실제 구매(purchase)까지 완료한 사용자의 비율을 계산해주세요. (결과는 소수점 첫째 자리까지 표시)",
+    "context": "사용자 경험 흐름을 개선하기 위해 장바구니에서 구매로 이어지는 전환율을 파악해야 합니다.",
+    "submission_requirements": "결과 컬럼은 conversion_rate (전환율) 하나로 구성되어야 합니다. 소수점 첫째 자리까지 표시해주세요.",
+    "answer_sql": "WITH AddToCart AS ( SELECT COUNT(DISTINCT user_id) AS atc_count FROM stream_events WHERE event_name = 'add_to_cart' ), Purchase AS ( SELECT COUNT(DISTINCT user_id) AS purchase_count FROM stream_events WHERE event_name = 'purchase' ) SELECT ROUND(CAST(p.purchase_count AS NUMERIC) / atc.atc_count, 1) AS conversion_rate FROM AddToCart atc, Purchase p;",
+    "expected_columns": [
+      "conversion_rate"
+    ],
+    "sort_keys": [],
+    "hint": "장바구니에 담은 사용자 수와 구매한 사용자 수를 각각 집계한 후, 구매 사용자 수를 장바구니 사용자 수로 나누어 전환율을 계산하세요. DISTINCT user_id를 사용하여 중복 사용자를 제거하고, ROUND 함수로 소수점 자리를 조절하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_003"
+    }
+  },
+  {
+    "problem_id": "stream_sql_004",
+    "difficulty": "medium",
+    "topic": "device",
+    "requester": "마케팅 분석팀",
+    "question": "각 디바이스(device) 별로 'view_product' 이벤트가 발생한 횟수와 'purchase' 이벤트가 발생한 횟수를 집계해주세요. 이를 통해 어떤 디바이스에서 상품 탐색이 활발하고 구매가 많이 일어나는지 비교하고 싶습니다.",
+    "context": "디바이스별 사용자 행동 패턴을 이해하여 각 디바이스에 최적화된 마케팅 전략을 수립하고자 합니다.",
+    "submission_requirements": "결과 컬럼은 device (디바이스 종류), view_count (상품 조회 수), purchase_count (구매 수) 세 개로 구성되어야 합니다. device 컬럼을 기준으로 오름차순 정렬해주세요.",
+    "answer_sql": "SELECT device, COUNT(CASE WHEN event_name = 'view_product' THEN 1 END) AS view_count, COUNT(CASE WHEN event_name = 'purchase' THEN 1 END) AS purchase_count FROM stream_events WHERE event_name IN ('view_product', 'purchase') GROUP BY device ORDER BY device ASC;",
+    "expected_columns": [
+      "device",
+      "view_count",
+      "purchase_count"
+    ],
+    "sort_keys": [
+      "device"
+    ],
+    "hint": "CASE WHEN 문을 사용하여 event_name에 따라 view_count와 purchase_count를 조건부로 집계하세요. event_name이 'view_product' 또는 'purchase'인 데이터만 필터링하고, device 별로 그룹화하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_004"
+    }
+  },
+  {
+    "problem_id": "stream_sql_005",
+    "difficulty": "hard",
+    "topic": "dau",
+    "requester": "제품팀",
+    "question": "2025년 11월 1일부터 2025년 11월 30일까지의 일별 활성 사용자 수(DAU)를 계산해주세요. DAU는 해당 날짜에 'visit' 이벤트를 발생시킨 고유한 user_id의 수를 의미합니다.",
+    "context": "서비스 이용률을 측정하는 핵심 지표인 DAU 변화 추이를 분석하여 서비스 안정성 및 사용자 참여도를 파악하고자 합니다.",
+    "submission_requirements": "결과 컬럼은 date (날짜) 와 dau (일별 활성 사용자 수) 두 개로 구성되어야 합니다. date 컬럼을 기준으로 오름차순 정렬해주세요.",
+    "answer_sql": "SELECT event_time::DATE AS date, COUNT(DISTINCT user_id) AS dau FROM stream_events WHERE event_name = 'visit' AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59' GROUP BY event_time::DATE ORDER BY date ASC;",
+    "expected_columns": [
+      "date",
+      "dau"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "hint": "stream_events 테이블에서 event_name이 'visit'인 데이터를 필터링하고, event_time의 날짜 부분만 추출하여 user_id 별로 고유한 수를 세세요. 날짜 범위 조건을 정확히 설정하고, 결과를 날짜 기준으로 정렬하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_005"
+    }
+  },
+  {
+    "problem_id": "stream_sql_006",
+    "difficulty": "hard",
+    "topic": "funnel",
+    "requester": "데이터 사이언스팀",
+    "question": "상품 탐색('view_product')부터 장바구니 담기('add_to_cart'), 그리고 최종 구매('purchase')까지 이어지는 3단계 퍼널의 각 단계별 전환율과 전체 퍼널 전환율을 계산해주세요. 각 단계 전환율은 이전 단계 사용자 대비 전환 비율이며, 전체 퍼널 전환율은 상품 탐색 사용자 대비 최종 구매 사용자 비율입니다.",
+    "context": "사용자 여정의 각 단계별 병목 현상을 파악하고 개선 기회를 발굴하기 위해 상세한 퍼널 분석이 필요합니다.",
+    "submission_requirements": "결과 컬럼은 stage (단계), user_count (해당 단계 사용자 수), conversion_rate (단계별 전환율) 세 개로 구성되어야 합니다. 'view_product' 단계를 시작으로, stage 컬럼을 기준으로 오름차순 정렬해주세요.",
+    "answer_sql": "WITH StageCounts AS ( SELECT COUNT(DISTINCT user_id) AS view_product_users FROM stream_events WHERE event_name = 'view_product' ), AddToCartCounts AS ( SELECT COUNT(DISTINCT user_id) AS add_to_cart_users FROM stream_events WHERE event_name = 'add_to_cart' AND user_id IN (SELECT user_id FROM stream_events WHERE event_name = 'view_product') ), PurchaseCounts AS ( SELECT COUNT(DISTINCT user_id) AS purchase_users FROM stream_events WHERE event_name = 'purchase' AND user_id IN (SELECT user_id FROM stream_events WHERE event_name = 'add_to_cart') ) SELECT 'view_product' AS stage, sc.view_product_users AS user_count, ROUND(CAST(atc.add_to_cart_users AS NUMERIC) / sc.view_product_users, 3) AS conversion_rate FROM StageCounts sc, AddToCartCounts atc UNION ALL SELECT 'add_to_cart' AS stage, atc.add_to_cart_users AS user_count, ROUND(CAST(pc.purchase_users AS NUMERIC) / atc.add_to_cart_users, 3) AS conversion_rate FROM AddToCartCounts atc, PurchaseCounts pc UNION ALL SELECT 'purchase' AS stage, pc.purchase_users AS user_count, 1.000 AS conversion_rate FROM PurchaseCounts pc ORDER BY FIELD(stage, 'view_product', 'add_to_cart', 'purchase');",
+    "expected_columns": [
+      "stage",
+      "user_count",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "stage"
+    ],
+    "hint": "단계별로 중첩 서브쿼리를 사용하여 사용자 수를 계산하고, 이전 단계 사용자 수를 기준으로 전환율을 계산하세요. UNION ALL을 사용하여 각 단계 결과를 합치고, FIELD 함수(MySQL) 대신 CASE WHEN을 사용하여 정렬 순서를 지정하거나, UNION ALL 결과에 대해 ORDER BY CASE WHEN ... END를 사용하세요. (PostgreSQL에서는 FIELD 함수가 없으므로 CASE WHEN으로 대체 필요)"
+  }
+]

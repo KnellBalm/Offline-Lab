@@ -18,6 +18,7 @@ const API_BASE = getApiBase();
 
 export const api = axios.create({
     baseURL: API_BASE,
+    withCredentials: true,  // 세션 쿠키 전송
     headers: {
         'Content-Type': 'application/json',
     },
@@ -52,6 +53,8 @@ export const statsApi = {
     me: () => api.get('/stats/me'),
     history: (limit: number = 20, dataType?: string) =>
         api.get('/stats/history', { params: { limit, data_type: dataType } }),
+    leaderboard: (limit: number = 20) =>
+        api.get('/stats/leaderboard', { params: { limit } }),
 };
 
 // 관리자 API
@@ -65,6 +68,13 @@ export const adminApi = {
     datasetVersions: () => api.get('/admin/dataset-versions'),
     schedulerLogs: (lines: number = 50) => api.get('/admin/scheduler-logs', { params: { lines } }),
     schedulerStatus: () => api.get('/admin/scheduler-status'),
+    getLogs: (category?: string, level?: string, limit: number = 100) =>
+        api.get('/admin/logs', { params: { category, level, limit } }),
+    getLogCategories: () => api.get('/admin/log-categories'),
+    // 사용자 관리
+    getUsers: () => api.get('/admin/users'),
+    toggleAdmin: (userId: string) => api.patch(`/admin/users/${userId}/admin`),
+    deleteUser: (userId: string) => api.delete(`/admin/users/${userId}`),
 };
 
 // 인증 API
@@ -74,4 +84,19 @@ export const authApi = {
     status: () => api.get('/auth/status'),
     googleLogin: () => `${API_BASE}/auth/google/login`,
     kakaoLogin: () => `${API_BASE}/auth/kakao/login`,
+    deleteAccount: () => api.delete('/auth/account'),
+};
+
+// 무한 연습 모드 API
+export const practiceApi = {
+    generate: (dataType: string = 'pa') =>
+        api.post('/practice/generate', { data_type: dataType }),
+    submit: (problemId: string, sql: string, answerSql: string, difficulty: string, dataType: string = 'pa') =>
+        api.post('/practice/submit', {
+            problem_id: problemId,
+            sql,
+            answer_sql: answerSql,
+            difficulty,
+            data_type: dataType
+        }),
 };

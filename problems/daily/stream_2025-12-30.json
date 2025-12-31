@@ -1,0 +1,197 @@
+[
+  {
+    "problem_id": "stream_sql_001",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "마케팅팀",
+    "question": "2025년 6월 15일부터 2025년 12월 18일까지의 일별 총 매출액과 구매 수를 조회해주세요. 매출액이 높은 순서대로 정렬해주세요.",
+    "context": "전체적인 매출 성과를 파악하고 캠페인 효과를 측정하기 위해 일별 매출 및 구매 데이터를 분석해야 합니다.",
+    "submission_requirements": {
+      "columns": [
+        {
+          "name": "date",
+          "description": "날짜"
+        },
+        {
+          "name": "revenue",
+          "description": "총 매출액"
+        },
+        {
+          "name": "purchases",
+          "description": "총 구매 수"
+        }
+      ],
+      "sort_order": "revenue DESC"
+    },
+    "answer_sql": "SELECT date, revenue, purchases FROM stream_daily_metrics WHERE date BETWEEN '2025-06-15' AND '2025-12-18' ORDER BY revenue DESC;",
+    "expected_columns": [
+      "date",
+      "revenue",
+      "purchases"
+    ],
+    "sort_keys": [
+      "revenue DESC"
+    ],
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_001"
+    }
+  },
+  {
+    "problem_id": "stream_sql_002",
+    "difficulty": "easy",
+    "topic": "channel",
+    "requester": "채널 운영팀",
+    "question": "각 채널별 총 방문자 수를 계산해주세요. 방문자 수가 많은 순서대로 정렬해주세요.",
+    "context": "어떤 채널이 가장 많은 사용자 트래픽을 유입시키는지 파악하여 채널별 마케팅 전략을 수립하고자 합니다.",
+    "submission_requirements": {
+      "columns": [
+        {
+          "name": "channel",
+          "description": "마케팅 채널"
+        },
+        {
+          "name": "total_visitors",
+          "description": "총 방문자 수"
+        }
+      ],
+      "sort_order": "total_visitors DESC"
+    },
+    "answer_sql": "SELECT channel, COUNT(DISTINCT user_id) AS total_visitors FROM stream_events WHERE event_name = 'visit' GROUP BY channel ORDER BY total_visitors DESC;",
+    "expected_columns": [
+      "channel",
+      "total_visitors"
+    ],
+    "sort_keys": [
+      "total_visitors DESC"
+    ],
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_002"
+    }
+  },
+  {
+    "problem_id": "stream_sql_003",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "마케팅팀",
+    "question": "제품 상세 페이지 조회(view_product)부터 최종 구매(purchase)까지의 전환 퍼널 단계별 전환율을 계산해주세요. 각 단계별 전환율은 이전 단계 사용자 수를 기준으로 계산합니다. 2025년 11월 1일부터 2025년 11월 30일까지의 데이터를 사용해주세요.",
+    "context": "특정 기간 동안의 사용자 구매 여정을 이해하고 병목 구간을 파악하여 전환율 개선 방안을 모색하고자 합니다.",
+    "submission_requirements": {
+      "columns": [
+        {
+          "name": "event_name",
+          "description": "퍼널 단계"
+        },
+        {
+          "name": "step_count",
+          "description": "단계별 사용자 수"
+        },
+        {
+          "name": "conversion_rate",
+          "description": "이전 단계 대비 전환율 (%)"
+        }
+      ],
+      "sort_order": "step_order ASC"
+    },
+    "answer_sql": "WITH funnel_counts AS ( SELECT 'view_product' AS step, ROW_NUMBER() OVER (ORDER BY MIN(event_time)) AS step_order FROM stream_events WHERE event_name = 'view_product' AND event_time BETWEEN '2025-11-01' AND '2025-11-30' GROUP BY session_id UNION ALL SELECT 'add_to_cart' AS step, ROW_NUMBER() OVER (ORDER BY MIN(event_time)) AS step_order FROM stream_events WHERE event_name = 'add_to_cart' AND event_time BETWEEN '2025-11-01' AND '2025-11-30' GROUP BY session_id UNION ALL SELECT 'checkout' AS step, ROW_NUMBER() OVER (ORDER BY MIN(event_time)) AS step_order FROM stream_events WHERE event_name = 'checkout' AND event_time BETWEEN '2025-11-01' AND '2025-11-30' GROUP BY session_id UNION ALL SELECT 'purchase' AS step, ROW_NUMBER() OVER (ORDER BY MIN(event_time)) AS step_order FROM stream_events WHERE event_name = 'purchase' AND event_time BETWEEN '2025-11-01' AND '2025-11-30' GROUP BY session_id ), ordered_funnel_counts AS ( SELECT fc.step, COUNT(*) AS step_count, ROW_NUMBER() OVER (ORDER BY MIN(se.event_time)) AS step_order FROM funnel_counts fc JOIN stream_events se ON fc.step = se.event_name AND se.event_time BETWEEN '2025-11-01' AND '2025-11-30' WHERE se.event_name IN ('view_product', 'add_to_cart', 'checkout', 'purchase') GROUP BY fc.step ), ranked_funnel AS ( SELECT step, step_count, LAG(step_count, 1, step_count) OVER (ORDER BY step_order) AS prev_step_count, ROW_NUMBER() OVER (ORDER BY step_order) AS step_rank FROM ordered_funnel_counts ) SELECT step AS event_name, step_count, CASE WHEN prev_step_count = 0 THEN 0 ELSE ROUND((CAST(step_count AS DECIMAL) / prev_step_count) * 100, 2) END AS conversion_rate FROM ranked_funnel ORDER BY step_rank;",
+    "expected_columns": [
+      "event_name",
+      "step_count",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "step_order ASC"
+    ],
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_003"
+    }
+  },
+  {
+    "problem_id": "stream_sql_004",
+    "difficulty": "medium",
+    "topic": "device",
+    "requester": "데이터 분석팀",
+    "question": "각 디바이스 유형별로 'add_to_cart' 이벤트 후 'purchase' 이벤트로 전환하는 전환율을 계산해주세요. 'add_to_cart'와 'purchase' 이벤트 모두 발생한 세션만을 대상으로 합니다. 2025년 10월 1일부터 2025년 12월 31일까지의 데이터를 사용해주세요.",
+    "context": "다양한 디바이스에서의 사용자 구매 행동 패턴을 분석하여 디바이스별 최적화 전략을 수립하고 싶습니다.",
+    "submission_requirements": {
+      "columns": [
+        {
+          "name": "device",
+          "description": "사용자 디바이스"
+        },
+        {
+          "name": "add_to_cart_to_purchase_conversion_rate",
+          "description": "'add_to_cart' -> 'purchase' 전환율 (%)"
+        }
+      ],
+      "sort_order": "add_to_cart_to_purchase_conversion_rate DESC"
+    },
+    "answer_sql": "WITH session_events AS ( SELECT session_id, device, MAX(CASE WHEN event_name = 'add_to_cart' THEN 1 ELSE 0 END) AS has_add_to_cart, MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) AS has_purchase FROM stream_events WHERE event_time BETWEEN '2025-10-01' AND '2025-12-31' AND event_name IN ('add_to_cart', 'purchase') GROUP BY session_id, device ) SELECT device, ROUND(SUM(CASE WHEN has_add_to_cart = 1 AND has_purchase = 1 THEN 1.0 ELSE 0 END) * 100.0 / COUNT(*), 2) AS add_to_cart_to_purchase_conversion_rate FROM session_events WHERE has_add_to_cart = 1 GROUP BY device ORDER BY add_to_cart_to_purchase_conversion_rate DESC;",
+    "expected_columns": [
+      "device",
+      "add_to_cart_to_purchase_conversion_rate"
+    ],
+    "sort_keys": [
+      "add_to_cart_to_purchase_conversion_rate DESC"
+    ],
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_004"
+    }
+  },
+  {
+    "problem_id": "stream_sql_005",
+    "difficulty": "hard",
+    "topic": "dau",
+    "requester": "프로덕트팀",
+    "question": "2025년 7월 1일부터 2025년 7월 31일까지의 일별 활성 사용자 수 (DAU)를 계산해주세요. 각 날짜별로 고유한 사용자 수를 집계합니다. 날짜 순서대로 정렬해주세요.",
+    "context": "특정 월 동안의 일별 사용자 활동량을 파악하여 서비스 이용 패턴을 이해하고 개선점을 찾고자 합니다.",
+    "submission_requirements": {
+      "columns": [
+        {
+          "name": "date",
+          "description": "날짜"
+        },
+        {
+          "name": "dau",
+          "description": "일별 활성 사용자 수"
+        }
+      ],
+      "sort_order": "date ASC"
+    },
+    "answer_sql": "SELECT DATE(event_time) AS date, COUNT(DISTINCT user_id) AS dau FROM stream_events WHERE event_time BETWEEN '2025-07-01' AND '2025-07-31' GROUP BY DATE(event_time) ORDER BY date ASC;",
+    "expected_columns": [
+      "date",
+      "dau"
+    ],
+    "sort_keys": [
+      "date ASC"
+    ],
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_005"
+    }
+  },
+  {
+    "problem_id": "stream_sql_006",
+    "difficulty": "hard",
+    "topic": "funnel",
+    "requester": "마케팅팀",
+    "question": "특정 세션에서 'view_product' 이벤트 이후 'purchase' 이벤트가 발생한 경우, 해당 세션의 평균 'add_to_cart' 이벤트 발생 횟수를 계산해주세요. 2025년 11월 1일부터 2025년 12월 18일까지의 데이터를 사용해주세요. 결과는 소수점 둘째 자리까지 반올림해주세요.",
+    "context": "구매로 이어진 세션에서 'add_to_cart' 액션이 얼마나 효율적으로 이루어졌는지 파악하여 장바구니 효율성을 높이기 위한 인사이트를 얻고 싶습니다.",
+    "submission_requirements": {
+      "columns": [
+        {
+          "name": "average_add_to_cart_count",
+          "description": "구매 세션당 평균 장바구니 추가 횟수"
+        }
+      ],
+      "sort_order": null
+    },
+    "answer_sql": "WITH purchase_sessions AS ( SELECT session_id FROM stream_events WHERE event_name = 'purchase' AND event_time BETWEEN '2025-11-01' AND '2025-12-18' ), view_purchase_sessions AS ( SELECT se.session_id FROM stream_events se JOIN purchase_sessions ps ON se.session_id = ps.session_id WHERE se.event_name = 'view_product' AND se.event_time BETWEEN '2025-11-01' AND '2025-12-18' GROUP BY se.session_id ), add_to_cart_counts AS ( SELECT session_id, COUNT(*) AS add_to_cart_count FROM stream_events WHERE event_name = 'add_to_cart' AND event_time BETWEEN '2025-11-01' AND '2025-12-18' GROUP BY session_id ) SELECT ROUND(AVG(atcc.add_to_cart_count), 2) AS average_add_to_cart_count FROM add_to_cart_counts atcc JOIN view_purchase_sessions vps ON atcc.session_id = vps.session_id;",
+    "expected_columns": [
+      "average_add_to_cart_count"
+    ],
+    "sort_keys": [],
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_006"
+    }
+  }
+]

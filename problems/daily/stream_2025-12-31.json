@@ -1,0 +1,165 @@
+[
+  {
+    "problem_id": "stream_sql_001",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "마케팅팀",
+    "question": "2025년 6월 15일부터 2025년 12월 18일까지의 일별 매출액과 구매 건수를 조회해주세요. 매출액이 높은 순서대로 정렬해주세요.",
+    "context": "마케팅 캠페인 성과를 주간/월간으로 집계하기 위해 일별 매출 및 구매 데이터를 확인해야 합니다.",
+    "submission_requirements": {
+      "columns": [
+        "date",
+        "revenue",
+        "purchases"
+      ],
+      "sort_order": "ORDER BY revenue DESC"
+    },
+    "answer_sql": "SELECT date, revenue, purchases FROM stream_daily_metrics WHERE date BETWEEN '2025-06-15' AND '2025-12-18' ORDER BY revenue DESC;",
+    "expected_columns": [
+      "date",
+      "revenue",
+      "purchases"
+    ],
+    "sort_keys": [
+      "revenue"
+    ],
+    "hint": "stream_daily_metrics 테이블에서 date, revenue, purchases 컬럼을 사용하고, 날짜 범위를 지정하여 조회하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_001"
+    }
+  },
+  {
+    "problem_id": "stream_sql_002",
+    "difficulty": "easy",
+    "topic": "channel",
+    "requester": "영업팀",
+    "question": "각 채널별 총 방문자 수(visit 이벤트)를 계산해주세요. 방문자 수가 많은 순서대로 정렬해주세요.",
+    "context": "어떤 채널에서 가장 많은 사용자가 유입되는지 파악하여 채널별 마케팅 전략 수립에 활용하고자 합니다.",
+    "submission_requirements": {
+      "columns": [
+        "channel",
+        "total_visitors"
+      ],
+      "sort_order": "ORDER BY total_visitors DESC"
+    },
+    "answer_sql": "SELECT channel, COUNT(DISTINCT user_id) AS total_visitors FROM stream_events WHERE event_name = 'visit' GROUP BY channel ORDER BY total_visitors DESC;",
+    "expected_columns": [
+      "channel",
+      "total_visitors"
+    ],
+    "sort_keys": [
+      "total_visitors"
+    ],
+    "hint": "stream_events 테이블에서 event_name이 'visit'인 경우의 user_id를 채널별로 집계하세요. DISTINCT 키워드를 사용하여 중복 사용자를 제거해야 합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_002"
+    }
+  },
+  {
+    "problem_id": "stream_sql_003",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "CX팀",
+    "question": "사용자 퍼널 분석을 위해 'view_product' -> 'add_to_cart' -> 'purchase' 단계별 전환율을 계산해주세요. 각 단계별 전환율은 이전 단계의 사용자 수를 기준으로 계산합니다.",
+    "context": "사용자들이 제품을 탐색하고 장바구니에 담고 구매에 이르는 과정에서의 이탈 지점을 파악하여 사용자 경험 개선을 위한 인사이트를 도출하고자 합니다.",
+    "submission_requirements": {
+      "columns": [
+        "step",
+        "user_count",
+        "conversion_rate"
+      ],
+      "sort_order": "ORDER BY step_order"
+    },
+    "answer_sql": "WITH funnel_steps AS ( SELECT 'view_product' AS step, 1 AS step_order, COUNT(DISTINCT user_id) AS user_count FROM stream_events WHERE event_name = 'view_product' UNION ALL SELECT 'add_to_cart' AS step, 2 AS step_order, COUNT(DISTINCT user_id) AS user_count FROM stream_events WHERE event_name = 'add_to_cart' UNION ALL SELECT 'purchase' AS step, 3 AS step_order, COUNT(DISTINCT user_id) AS user_count FROM stream_events WHERE event_name = 'purchase' ), base_view_product AS ( SELECT user_id FROM stream_events WHERE event_name = 'view_product' ), base_add_to_cart AS ( SELECT user_id FROM stream_events WHERE event_name = 'add_to_cart' AND user_id IN (SELECT user_id FROM base_view_product) ), base_purchase AS ( SELECT user_id FROM stream_events WHERE event_name = 'purchase' AND user_id IN (SELECT user_id FROM base_add_to_cart) ), final_funnel AS ( SELECT 'view_product' AS step, COUNT(DISTINCT user_id) AS user_count FROM base_view_product UNION ALL SELECT 'add_to_cart' AS step, COUNT(DISTINCT user_id) AS user_count FROM base_add_to_cart UNION ALL SELECT 'purchase' AS step, COUNT(DISTINCT user_id) AS user_count FROM base_purchase ) SELECT f.step, f.user_count, ROUND((f.user_count::FLOAT / (SELECT user_count FROM final_funnel WHERE step = 'view_product')) * 100, 2) AS conversion_rate FROM final_funnel f ORDER BY CASE f.step WHEN 'view_product' THEN 1 WHEN 'add_to_cart' THEN 2 WHEN 'purchase' THEN 3 END;",
+    "expected_columns": [
+      "step",
+      "user_count",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "step"
+    ],
+    "hint": "각 퍼널 단계별로 고유 사용자 수를 집계한 후, 첫 번째 단계(view_product)의 사용자 수를 기준으로 전환율을 계산하세요. CTE(Common Table Expression)를 활용하면 쿼리를 구조화하기 용이합니다."
+  },
+  {
+    "problem_id": "stream_sql_004",
+    "difficulty": "medium",
+    "topic": "device",
+    "requester": "데이터분석팀",
+    "question": "각 디바이스(device)별로 'view_product' 이벤트 발생 수 대비 'purchase' 이벤트 발생 비율을 계산하여, 전환율이 높은 순서대로 정렬해주세요. (purchases / view_products) * 100%",
+    "context": "어떤 디바이스 환경에서 사용자들이 제품을 더 많이 탐색하고 실제 구매로 이어지는지 파악하여 디바이스별 최적화 전략을 세우고자 합니다.",
+    "submission_requirements": {
+      "columns": [
+        "device",
+        "view_product_count",
+        "purchase_count",
+        "purchase_conversion_rate"
+      ],
+      "sort_order": "ORDER BY purchase_conversion_rate DESC"
+    },
+    "answer_sql": "WITH device_events AS ( SELECT device, event_name, COUNT(*) AS event_count FROM stream_events WHERE event_name IN ('view_product', 'purchase') GROUP BY device, event_name ) SELECT vp.device, vp.event_count AS view_product_count, COALESCE(p.event_count, 0) AS purchase_count, ROUND((COALESCE(p.event_count, 0)::FLOAT / vp.event_count) * 100, 2) AS purchase_conversion_rate FROM device_events vp LEFT JOIN device_events p ON vp.device = p.device AND p.event_name = 'purchase' WHERE vp.event_name = 'view_product' ORDER BY purchase_conversion_rate DESC;",
+    "expected_columns": [
+      "device",
+      "view_product_count",
+      "purchase_count",
+      "purchase_conversion_rate"
+    ],
+    "sort_keys": [
+      "purchase_conversion_rate"
+    ],
+    "hint": "각 디바이스별로 'view_product'와 'purchase' 이벤트를 각각 집계한 후, 'view_product' 이벤트 수를 기준으로 'purchase' 이벤트의 비율을 계산하세요. LEFT JOIN과 COALESCE 함수를 사용하여 purchase 이벤트가 없는 경우를 처리해야 합니다."
+  },
+  {
+    "problem_id": "stream_sql_005",
+    "difficulty": "hard",
+    "topic": "dau",
+    "requester": "기획팀",
+    "question": "2025년 6월 15일부터 2025년 12월 18일까지 일별 활성 사용자(Daily Active Users, DAU) 수를 계산해주세요. DAU는 하루에 최소 한 번 이상 이벤트를 발생시킨 고유 사용자 수입니다. 결과는 날짜 순으로 정렬해주세요.",
+    "context": "서비스의 일일 사용자 활성도를 파악하여 서비스 성장 추이를 모니터링하고, 캠페인이나 프로모션 효과를 측정하는 데 기초 자료로 활용하고자 합니다.",
+    "submission_requirements": {
+      "columns": [
+        "date",
+        "dau"
+      ],
+      "sort_order": "ORDER BY date ASC"
+    },
+    "answer_sql": "SELECT date, COUNT(DISTINCT user_id) AS dau FROM ( SELECT DATE(event_time) AS date, user_id FROM stream_events WHERE event_time BETWEEN '2025-06-15 00:00:00' AND '2025-12-18 23:59:59' ) AS daily_users GROUP BY date ORDER BY date ASC;",
+    "expected_columns": [
+      "date",
+      "dau"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "hint": "stream_events 테이블의 event_time을 DATE 형식으로 변환하여 날짜별로 그룹화하고, 각 날짜별 고유 user_id의 개수를 세면 됩니다. 이벤트 발생 시점을 기준으로 날짜를 집계해야 합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_005"
+    }
+  },
+  {
+    "problem_id": "stream_sql_006",
+    "difficulty": "hard",
+    "topic": "funnel",
+    "requester": "데이터 엔지니어링팀",
+    "question": "2025년 10월 1일부터 2025년 11월 30일까지 'visit' 이벤트 발생 후 'purchase' 이벤트까지 도달한 세션(session_id)의 수와, 해당 기간 동안 발생한 총 세션 수를 계산해주세요. 또한, 'visit'에서 'purchase'까지의 세션 전환율을 계산해주세요.",
+    "context": "특정 기간 동안의 마케팅 캠페인 효과를 세션 단위로 분석하여, 어떤 세션들이 실제 구매로 이어졌는지, 그리고 전체 세션 대비 전환율은 어떠한지 파악하고자 합니다.",
+    "submission_requirements": {
+      "columns": [
+        "session_to_purchase_sessions",
+        "total_sessions",
+        "session_conversion_rate"
+      ],
+      "sort_order": "ORDER BY session_conversion_rate DESC"
+    },
+    "answer_sql": "WITH session_events AS ( SELECT session_id, MIN(CASE WHEN event_name = 'visit' THEN event_time END) AS visit_time, MAX(CASE WHEN event_name = 'purchase' THEN event_time END) AS purchase_time FROM stream_events WHERE event_time BETWEEN '2025-10-01 00:00:00' AND '2025-11-30 23:59:59' GROUP BY session_id ), purchase_sessions AS ( SELECT COUNT(DISTINCT session_id) AS session_to_purchase_sessions FROM session_events WHERE visit_time IS NOT NULL AND purchase_time IS NOT NULL AND visit_time < purchase_time ), total_sessions_in_period AS ( SELECT COUNT(DISTINCT session_id) AS total_sessions FROM stream_events WHERE event_time BETWEEN '2025-10-01 00:00:00' AND '2025-11-30 23:59:59' ) SELECT ps.session_to_purchase_sessions, tsp.total_sessions, ROUND((ps.session_to_purchase_sessions::FLOAT / tsp.total_sessions) * 100, 2) AS session_conversion_rate FROM purchase_sessions ps, total_sessions_in_period tsp;",
+    "expected_columns": [
+      "session_to_purchase_sessions",
+      "total_sessions",
+      "session_conversion_rate"
+    ],
+    "sort_keys": [
+      "session_conversion_rate"
+    ],
+    "hint": "먼저 각 세션별로 'visit' 이벤트 발생 시간과 'purchase' 이벤트 발생 시간을 기록하는 CTE를 만듭니다. 그 후, 'visit' 이후 'purchase'가 발생한 세션과 해당 기간 동안의 총 세션 수를 집계하여 전환율을 계산하세요. \"visit_time < purchase_time\" 조건을 사용하여 'visit'이 'purchase'보다 먼저 발생했는지 확인해야 합니다."
+  }
+]

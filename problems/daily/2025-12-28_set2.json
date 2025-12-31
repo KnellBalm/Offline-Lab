@@ -1,0 +1,173 @@
+[
+  {
+    "problem_id": "saas_sql_001_set2",
+    "difficulty": "easy",
+    "topic": "activation",
+    "requester": "그로스팀",
+    "question": "안녕하세요, 그로스팀입니다. 신규 가입 사용자가 온보딩을 완료하고 우리 플랫폼의 핵심 기능(feature_use)을 최소 3회 이상 사용하는 Activation 이벤트를 정의했습니다. 2025년 11월부터 12월까지 매주 Activation 달성 사용자 수를 집계해서 보내주세요. 결과는 날짜 기준 오름차순으로 부탁드립니다.",
+    "context": "Activation은 신규 사용자가 제품의 가치를 경험하고 성공적으로 제품을 사용하기 시작했음을 나타내는 중요한 지표입니다. Activation Rate를 분석하여 온보딩 및 초기 사용자 경험 개선을 위한 인사이트를 얻고자 합니다.",
+    "submission_requirements": "결과는 'date' (주 시작일)와 'activated_users' 컬럼으로 구성하며, 'date' 기준 오름차순으로 정렬합니다. 'date'는 해당 주의 월요일 날짜로 표시합니다.",
+    "answer_sql": "WITH UserActivation AS (\n    SELECT \n        user_id,\n        MIN(CASE WHEN event_name = 'onboarding_complete' THEN event_time ELSE NULL END) AS onboarding_complete_time,\n        COUNT(CASE WHEN event_name = 'feature_use' THEN 1 ELSE NULL END) AS feature_use_count\n    FROM pa_events\n    WHERE event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-31 23:59:59'\n    GROUP BY user_id\n    HAVING onboarding_complete_time IS NOT NULL AND feature_use_count >= 3\n),\nWeeklyActivation AS (\n    SELECT\n        DATE_TRUNC('week', ua.onboarding_complete_time)::DATE AS week_start_date,\n        COUNT(DISTINCT ua.user_id) AS activated_users\n    FROM UserActivation ua\n    JOIN pa_users u ON ua.user_id = u.user_id\n    WHERE u.signup_at BETWEEN '2025-11-01 00:00:00' AND '2025-12-31 23:59:59'\n    GROUP BY week_start_date\n)\nSELECT \n    week_start_date AS date,\n    activated_users\nFROM WeeklyActivation\nORDER BY date ASC;",
+    "expected_description": "매주 온보딩 완료 후 3회 이상의 feature_use를 달성한 사용자 수를 나타냅니다. 이는 제품의 초기 성공과 가치 전달을 측정하는 지표입니다.",
+    "expected_columns": [
+      "date",
+      "activated_users"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "hint": "DATE_TRUNC 함수를 사용하여 주별로 그룹화할 수 있습니다. ONBOARDING_COMPLETE 와 FEATURE_USE 이벤트 시간을 기준으로 사용자별 활성화 여부를 판단해야 합니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "error": "column \"onboarding_complete_time\" does not exist\nLINE 9:     HAVING onboarding_complete_time IS NOT NULL AND feature_...\n                   ^\n"
+    }
+  },
+  {
+    "problem_id": "saas_sql_002_set2",
+    "difficulty": "easy",
+    "topic": "engagement",
+    "requester": "경영진",
+    "question": "CEO님께 보고드릴 WAU(Weekly Active Users) 데이터를 준비해야 합니다. 저희 플랫폼의 핵심 활동은 'feature_use' 이벤트로 정의했습니다. 2025년 11월 1일부터 2025년 12월 28일까지 매주 WAU 수를 집계해서 보내주세요. 결과는 날짜 기준 오름차순으로 부탁드립니다.",
+    "context": "WAU는 플랫폼의 전반적인 사용자 활동 수준을 파악하는 핵심 지표입니다. 'feature_use' 이벤트는 사용자가 제품의 핵심 기능을 사용하고 있음을 의미하므로, 이를 기준으로 WAU를 정의합니다.",
+    "submission_requirements": "결과는 'date' (주 시작일)와 'wau_count' 컬럼으로 구성하며, 'date' 기준 오름차순으로 정렬합니다. 'date'는 해당 주의 월요일 날짜로 표시합니다.",
+    "answer_sql": "SELECT \n    DATE_TRUNC('week', event_time)::DATE AS date,\n    COUNT(DISTINCT user_id) AS wau_count\nFROM pa_events\nWHERE event_name = 'feature_use'\n  AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-28 23:59:59'\nGROUP BY date\nORDER BY date ASC;",
+    "expected_description": "각 주별로 'feature_use' 이벤트를 발생시킨 고유 사용자 수를 나타냅니다. 이는 플랫폼의 주간 사용자 참여도를 측정합니다.",
+    "expected_columns": [
+      "date",
+      "wau_count"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "hint": "DATE_TRUNC 함수를 사용하여 날짜를 주의 시작일로 맞추고, COUNT(DISTINCT user_id)를 사용하여 고유 사용자 수를 계산합니다. 'feature_use' 이벤트만 필터링하는 것을 잊지 마세요.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 9,
+      "columns": [
+        {
+          "name": "date",
+          "type": "date"
+        },
+        {
+          "name": "wau_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_002_set2"
+    }
+  },
+  {
+    "problem_id": "saas_sql_003_set2",
+    "difficulty": "medium",
+    "topic": "activation",
+    "requester": "PM팀",
+    "question": "안녕하세요, PM팀입니다. 신규 온보딩 과정에서 'onboarding_complete' 이벤트 이후 7일 이내에 'feature_use' 이벤트를 5회 이상 발생시킨 사용자를 'Activated User'로 정의하고 싶습니다. 2025년 11월 신규 가입자 중 Activated User 비율을 알고 싶습니다. 결과는 Activation User 비율(소수점 3자리 반올림)로만 보여주세요.",
+    "context": "신규 사용자의 초기 경험이 제품의 장기적인 성공에 중요하므로, 온보딩 후 특정 기간 내 핵심 기능 사용을 통해 사용자의 가치 경험을 정의하고 이를 측정하고자 합니다.",
+    "submission_requirements": "결과는 'activation_rate'라는 단일 컬럼으로 표시하며, 소수점 3자리까지 반올림합니다.",
+    "answer_sql": "WITH UserEvents AS (\n    SELECT \n        user_id,\n        MIN(CASE WHEN event_name = 'onboarding_complete' THEN event_time ELSE NULL END) AS onboarding_complete_time,\n        COUNT(CASE WHEN event_name = 'feature_use' THEN 1 ELSE NULL END) AS feature_uses_after_onboarding\n    FROM pa_events\n    WHERE event_name IN ('onboarding_complete', 'feature_use')\n    GROUP BY user_id\n),\nActivatedUsers AS (\n    SELECT \n        ue.user_id\n    FROM UserEvents ue\n    JOIN pa_users u ON ue.user_id = u.user_id\n    WHERE u.signup_at BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59'\n      AND ue.onboarding_complete_time IS NOT NULL\n      AND ue.onboarding_complete_time + INTERVAL '7 days' >= (SELECT MIN(event_time) FROM pa_events WHERE user_id = ue.user_id AND event_name = 'feature_use' AND event_time > ue.onboarding_complete_time)\n      AND (SELECT COUNT(*) FROM pa_events WHERE user_id = ue.user_id AND event_name = 'feature_use' AND event_time > ue.onboarding_complete_time AND event_time <= ue.onboarding_complete_time + INTERVAL '7 days') >= 5\n),\nTotalNewUsers AS (\n    SELECT COUNT(DISTINCT user_id) AS total_users\n    FROM pa_users\n    WHERE signup_at BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59'\n)\nSELECT \n    ROUND(CAST(COUNT(DISTINCT au.user_id) AS NUMERIC) / tn.total_users, 3) AS activation_rate\nFROM ActivatedUsers au\nCROSS JOIN TotalNewUsers tn;",
+    "expected_description": "2025년 11월 신규 가입자 중 온보딩 완료 후 7일 이내에 5회 이상 feature_use를 사용한 사용자의 비율입니다.",
+    "expected_columns": [
+      "activation_rate"
+    ],
+    "sort_keys": [],
+    "hint": "서브쿼리 또는 CTE(Common Table Expression)를 사용하여 각 사용자의 온보딩 완료 시간과 그 이후의 feature_use 이벤트를 집계하고, 7일 이내의 사용 횟수를 계산해야 합니다. 날짜 비교 시 INTERVAL을 활용하세요.",
+    "xp_value": 5,
+    "expected_meta": {
+      "error": "column \"tn.total_users\" must appear in the GROUP BY clause or be used in an aggregate function\nLINE 26: ...UND(CAST(COUNT(DISTINCT au.user_id) AS NUMERIC) / tn.total_u...\n                                                              ^\n"
+    }
+  },
+  {
+    "problem_id": "saas_sql_004_set2",
+    "difficulty": "medium",
+    "topic": "engagement",
+    "requester": "플랫폼팀",
+    "question": "플랫폼팀입니다. API 사용량이 많은 고객을 파악하고 싶습니다. 2025년 10월 29일부터 12월 28일까지 'api_call' 이벤트가 발생한 사용자별 총 API 호출 횟수를 집계해서 상위 10명만 보여주세요. 결과는 API 호출 횟수 기준 내림차순으로 정렬하고, 사용자 ID, 총 API 호출 횟수를 포함해야 합니다.",
+    "context": "API 사용량은 플랫폼의 고급 기능 활용 및 외부 시스템과의 통합 수준을 나타내는 지표입니다. API 사용량이 높은 고객을 식별하여 지원 및 협력 방안을 모색하는 데 활용합니다.",
+    "submission_requirements": "결과는 'user_id'와 'api_call_count' 컬럼으로 구성하며, 'api_call_count' 기준 내림차순으로 10개의 행만 반환합니다.",
+    "answer_sql": "SELECT \n    user_id,\n    COUNT(event_id) AS api_call_count\nFROM pa_events\nWHERE event_name = 'api_call'\n  AND event_time BETWEEN '2025-10-29 00:00:00' AND '2025-12-28 23:59:59'\nGROUP BY user_id\nORDER BY api_call_count DESC\nLIMIT 10;",
+    "expected_description": "2025년 10월 29일부터 12월 28일까지 'api_call' 이벤트를 가장 많이 발생시킨 상위 10명의 사용자 ID와 해당 사용자의 총 API 호출 횟수입니다.",
+    "expected_columns": [
+      "user_id",
+      "api_call_count"
+    ],
+    "sort_keys": [
+      "api_call_count"
+    ],
+    "hint": "pa_events 테이블에서 event_name이 'api_call'인 경우만 필터링하고, user_id 별로 COUNT(*) 또는 COUNT(event_id)를 사용하여 API 호출 횟수를 집계합니다. ORDER BY와 LIMIT 절을 사용하여 상위 10명의 데이터를 추출하세요.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 10,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "api_call_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_004_set2"
+    }
+  },
+  {
+    "problem_id": "saas_sql_005_set2",
+    "difficulty": "hard",
+    "topic": "churn",
+    "requester": "CS팀",
+    "question": "CS팀입니다. 구독 취소('cancel_subscription') 직전 14일 동안 나타나는 사용자 행동 패턴을 분석하여 Churn 위험 고객을 예측하고 싶습니다. 2025년 11월 1일부터 12월 28일 사이에 'cancel_subscription' 이벤트를 발생시킨 사용자들의 해당 이벤트 발생 시점으로부터 이전 14일 동안 발생한 이벤트 종류별 빈도를 집계해주세요. 결과에는 사용자 ID, 이벤트 종류, 해당 이벤트 발생 횟수를 포함하며, 사용자 ID와 이벤트 발생 횟수 내림차순으로 정렬해주세요.",
+    "context": "고객 이탈(Churn)은 비즈니스 성장에 큰 영향을 미치므로, 이탈 징후를 사전에 파악하여 선제적인 대응 전략을 수립하는 것이 중요합니다. 구독 취소 전 행동 패턴 분석을 통해 이탈 가능성이 높은 고객을 식별하고자 합니다.",
+    "submission_requirements": "결과는 'user_id', 'event_name', 'event_count' 컬럼으로 구성하며, 'user_id' 기준 오름차순, 그리고 동일한 'user_id' 내에서는 'event_count' 기준 내림차순으로 정렬합니다. 'event_count'가 0인 이벤트는 제외합니다.",
+    "answer_sql": "WITH CancelledUsers AS (\n    SELECT \n        user_id,\n        event_time AS cancel_time\n    FROM pa_events\n    WHERE event_name = 'cancel_subscription'\n      AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-28 23:59:59'\n),\nPreChurnEvents AS (\n    SELECT \n        cu.user_id,\n        e.event_name,\n        COUNT(e.event_id) AS event_count\n    FROM CancelledUsers cu\n    JOIN pa_events e ON cu.user_id = e.user_id\n    WHERE e.event_time BETWEEN cu.cancel_time - INTERVAL '14 days' AND cu.cancel_time\n    GROUP BY cu.user_id, e.event_name\n)\nSELECT \n    user_id,\n    event_name,\n    event_count\nFROM PreChurnEvents\nWHERE event_count > 0\nORDER BY user_id ASC, event_count DESC;",
+    "expected_description": "구독 취소 이벤트 발생 14일 전까지 각 사용자가 발생시킨 이벤트 종류별 빈도를 나타냅니다. 이탈 징후 파악에 활용됩니다.",
+    "expected_columns": [
+      "user_id",
+      "event_name",
+      "event_count"
+    ],
+    "sort_keys": [
+      "user_id",
+      "event_count"
+    ],
+    "hint": "먼저 cancel_subscription 이벤트를 발생시킨 사용자들을 식별합니다. 그런 다음, 각 사용자에 대해 cancel_time으로부터 이전 14일 동안 발생한 모든 이벤트를 필터링하고, event_name 별로 집계합니다. INTERVAL 연산을 사용하여 날짜 범위를 지정하는 것이 중요합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 4125,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "event_name",
+          "type": "text"
+        },
+        {
+          "name": "event_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_005_set2"
+    }
+  },
+  {
+    "problem_id": "saas_sql_006_set2",
+    "difficulty": "hard",
+    "topic": "revenue",
+    "requester": "세일즈팀",
+    "question": "세일즈팀입니다. 저희 플랫폼은 월별 구독 모델을 가지고 있습니다. 'upgrade_plan' 이벤트를 통해 상위 유료 플랜으로 전환하는 고객들의 전환율을 분석하고 싶습니다. 2025년 11월 1일부터 12월 28일 사이에 'upgrade_plan' 이벤트를 경험한 사용자 중, 해당 이벤트를 발생시키기 이전 30일 이내에 'dashboard_view' 또는 'feature_use' 이벤트 중 하나라도 발생시킨 사용자의 비율을 계산해주세요. 결과는 upgrade_rate라는 단일 컬럼으로 표시하며, 소수점 3자리까지 반올림합니다.",
+    "context": "유료 플랜으로의 전환은 고객의 플랫폼 가치 인지와 사용량 증가를 반영하므로, 전환율 분석은 비즈니스 성장 및 수익 증대를 위한 핵심입니다. 'upgrade_plan' 이전의 주요 활동을 파악하여 성공적인 전환 요인을 이해하고자 합니다.",
+    "submission_requirements": "결과는 'upgrade_rate'라는 단일 컬럼으로 표시하며, 소수점 3자리까지 반올림합니다.",
+    "answer_sql": "WITH UpgradeEvents AS (\n    SELECT \n        user_id,\n        event_time AS upgrade_time\n    FROM pa_events\n    WHERE event_name = 'upgrade_plan'\n      AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-28 23:59:59'\n),\nPreUpgradeActivity AS (\n    SELECT DISTINCT \n        ue.user_id\n    FROM UpgradeEvents ue\n    JOIN pa_events e ON ue.user_id = e.user_id\n    WHERE e.event_name IN ('dashboard_view', 'feature_use')\n      AND e.event_time BETWEEN ue.upgrade_time - INTERVAL '30 days' AND ue.upgrade_time\n),\nTotalUpgradedUsers AS (\n    SELECT COUNT(DISTINCT user_id) AS total_upgrades\n    FROM UpgradeEvents\n)\nSELECT \n    ROUND(CAST(COUNT(DISTINCT pu.user_id) AS NUMERIC) / tu.total_upgrades, 3) AS upgrade_rate\nFROM PreUpgradeActivity pu\nCROSS JOIN TotalUpgradedUsers tu;",
+    "expected_description": "'upgrade_plan' 이벤트 발생 사용자 중, 해당 이벤트 발생 30일 이전 'dashboard_view' 또는 'feature_use' 이벤트를 경험한 사용자의 비율입니다.",
+    "expected_columns": [
+      "upgrade_rate"
+    ],
+    "sort_keys": [],
+    "hint": "먼저 upgrade_plan 이벤트를 발생시킨 사용자와 해당 시간을 식별합니다. 그 후, 각 사용자에 대해 upgrade_time 기준으로 이전 30일 동안 dashboard_view 또는 feature_use 이벤트가 발생했는지 확인합니다. Subquery 또는 CTE를 사용하여 데이터를 효율적으로 처리하세요.",
+    "xp_value": 8,
+    "expected_meta": {
+      "error": "column \"tu.total_upgrades\" must appear in the GROUP BY clause or be used in an aggregate function\nLINE 22: ...UND(CAST(COUNT(DISTINCT pu.user_id) AS NUMERIC) / tu.total_u...\n                                                              ^\n"
+    }
+  }
+]

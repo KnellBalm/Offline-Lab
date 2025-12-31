@@ -3,7 +3,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: #fff;
+    background: var(--bg-primary);
     border-radius: 8px;
     overflow: hidden;
 }
@@ -12,8 +12,8 @@
     display: flex;
     justify-content: space-between;
     padding: 0.5rem 1rem;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e0e0e0;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
     font-size: 0.8rem;
 }
 
@@ -46,11 +46,13 @@
 .result-table th {
     position: sticky;
     top: 0;
-    background: #343a40;
-    color: #fff;
-    padding: 0.5rem 0.75rem;
+    background: #2563eb;
+    color: var(--bg-primary);
+    padding: 0.6rem 0.75rem;
     text-align: left;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
 }
 
 .result-table td {
@@ -63,5 +65,5 @@
 }
 
 .result-table tr:hover td {
-    background: #f8f9fa;
+    background: var(--bg-secondary);
 }

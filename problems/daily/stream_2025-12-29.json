@@ -1,0 +1,115 @@
+[
+  {
+    "problem_id": "stream_sql_001",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "재무팀",
+    "question": "2025년 7월부터 9월까지의 일별 매출 현황을 보여주세요. 각 날짜별 매출액과 구매 건수를 확인할 수 있어야 합니다. 결과를 날짜 순으로 정렬해주세요.",
+    "context": "분기별 재무 보고서 작성을 위해 2025년 3분기 동안의 일별 매출 및 구매 데이터를 집계해야 합니다.",
+    "submission_requirements": "결과는 'date' (날짜), 'revenue' (매출액), 'purchases' (구매 건수) 컬럼으로 구성되어야 합니다. 'date' 컬럼 기준으로 오름차순 정렬해주세요.",
+    "answer_sql": "SELECT date, revenue, purchases FROM stream_daily_metrics WHERE date BETWEEN '2025-07-01' AND '2025-09-30' ORDER BY date ASC;",
+    "expected_columns": [
+      "date",
+      "revenue",
+      "purchases"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_001"
+    }
+  },
+  {
+    "problem_id": "stream_sql_002",
+    "difficulty": "easy",
+    "topic": "channel",
+    "requester": "마케팅팀",
+    "question": "전체 기간 동안 각 채널별 총 방문자 수를 집계해주세요. 어떤 채널에서 가장 많은 사용자가 유입되었는지 파악하고 싶습니다. 결과를 방문자 수가 많은 순서대로 정렬해주세요.",
+    "context": "각 광고 채널의 성과를 측정하고 효과적인 채널에 마케팅 예산을 집중하기 위해 채널별 사용자 유입 현황을 분석해야 합니다.",
+    "submission_requirements": "결과는 'channel' (채널명)과 'total_visitors' (총 방문자 수) 컬럼으로 구성되어야 합니다. 'total_visitors' 컬럼 기준으로 내림차순 정렬해주세요.",
+    "answer_sql": "SELECT channel, COUNT(DISTINCT user_id) AS total_visitors FROM stream_events WHERE event_name = 'visit' GROUP BY channel ORDER BY total_visitors DESC;",
+    "expected_columns": [
+      "channel",
+      "total_visitors"
+    ],
+    "sort_keys": [
+      "total_visitors"
+    ],
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_002"
+    }
+  },
+  {
+    "problem_id": "stream_sql_003",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "프로덕트팀",
+    "question": "장바구니에 상품을 담은 사용자 중 실제 구매를 완료한 사용자의 비율을 퍼널 단계별로 보여주세요. 각 단계별로 얼마나 많은 사용자가 이탈하는지 분석하여 개선점을 찾고 싶습니다. (단, 'purchase' 이벤트는 'checkout' 이후에 발생한다고 가정합니다.)",
+    "context": "사용자 경험 개선을 위해 주요 구매 퍼널 단계에서의 전환율을 분석하고 사용자 이탈 지점을 파악해야 합니다. 'add_to_cart' -> 'checkout' -> 'purchase' 흐름을 분석합니다.",
+    "submission_requirements": "결과는 'step' (퍼널 단계), 'users' (해당 단계 사용자 수), 'conversion_rate' (이전 단계 대비 전환율) 컬럼으로 구성되어야 합니다. 각 단계는 'add_to_cart', 'checkout', 'purchase' 순으로 나열되어야 하며, 'add_to_cart' 단계의 전환율은 100%로 간주합니다.",
+    "answer_sql": "WITH funnel_counts AS (\n    SELECT \n        'add_to_cart' AS step, \n        COUNT(DISTINCT user_id) AS users\n    FROM stream_events\n    WHERE event_name = 'add_to_cart'\n\n    UNION ALL\n\n    SELECT\n        'checkout' AS step,\n        COUNT(DISTINCT user_id) AS users\n    FROM stream_events\n    WHERE event_name = 'checkout'\n\n    UNION ALL\n\n    SELECT\n        'purchase' AS step,\n        COUNT(DISTINCT user_id) AS users\n    FROM stream_events\n    WHERE event_name = 'purchase'\n),\n\nranked_funnel AS (\n    SELECT\n        step,\n        users,\n        ROW_NUMBER() OVER (ORDER BY \n            CASE step \n                WHEN 'add_to_cart' THEN 1 \n                WHEN 'checkout' THEN 2 \n                WHEN 'purchase' THEN 3 \n            END\n        ) as step_order\n    FROM funnel_counts\n)\n\nSELECT \n    rf.step, \n    rf.users,\n    CASE \n        WHEN rf.step_order = 1 THEN 1.0 -- add_to_cart는 시작점이므로 100%로 간주\n        ELSE (rf.users::FLOAT / LAG(rf.users, 1, rf.users)::FLOAT) * 100.0\n    END AS conversion_rate\nFROM ranked_funnel rf\nORDER BY rf.step_order ASC;",
+    "expected_columns": [
+      "step",
+      "users",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "step"
+    ]
+  },
+  {
+    "problem_id": "stream_sql_004",
+    "difficulty": "medium",
+    "topic": "device",
+    "requester": "마케팅팀",
+    "question": "각 디바이스 유형별로 'add_to_cart' 이벤트를 발생시킨 사용자 수 대비 'purchase' 이벤트를 발생시킨 사용자 수의 비율을 계산해주세요. 이를 통해 어떤 디바이스에서 구매 전환율이 높은지 비교하고 싶습니다. (단, 'add_to_cart' 이벤트 후 'purchase' 이벤트가 발생한 경우에만 유효한 전환으로 간주하며, 동일 사용자가 여러 번 발생해도 한 번으로 계산합니다.)",
+    "context": "디바이스별 사용자 경험 및 구매 여정의 효율성을 분석하여 최적화 전략 수립을 위한 기초 데이터를 확보하고자 합니다.",
+    "submission_requirements": "결과는 'device' (디바이스 유형), 'add_to_cart_users' (장바구니 담은 고유 사용자 수), 'purchase_users' (구매 완료 고유 사용자 수), 'purchase_conversion_rate' (구매 전환율) 컬럼으로 구성되어야 합니다. 'purchase_conversion_rate'는 소수점 둘째 자리까지 표시하고, 'add_to_cart_users' 기준으로 내림차순 정렬해주세요.",
+    "answer_sql": "WITH device_actions AS (\n    SELECT DISTINCT user_id, device, 'add_to_cart' as action FROM stream_events WHERE event_name = 'add_to_cart'\n    UNION\n    SELECT DISTINCT user_id, device, 'purchase' as action FROM stream_events WHERE event_name = 'purchase'\n),\n\ndevice_stage_users AS (\n    SELECT\n        device,\n        COUNT(DISTINCT CASE WHEN action = 'add_to_cart' THEN user_id ELSE NULL END) AS add_to_cart_users,\n        COUNT(DISTINCT CASE WHEN action = 'purchase' THEN user_id ELSE NULL END) AS purchase_users\n    FROM device_actions\n    GROUP BY device\n)\n\nSELECT \n    device,\n    add_to_cart_users,\n    purchase_users,\n    ROUND((purchase_users::FLOAT / add_to_cart_users::FLOAT) * 100.0, 2) AS purchase_conversion_rate\nFROM device_stage_users\nWHERE add_to_cart_users > 0 -- 장바구니 담은 사용자가 없는 경우는 제외\nORDER BY add_to_cart_users DESC;",
+    "expected_columns": [
+      "device",
+      "add_to_cart_users",
+      "purchase_users",
+      "purchase_conversion_rate"
+    ],
+    "sort_keys": [
+      "add_to_cart_users"
+    ]
+  },
+  {
+    "problem_id": "stream_sql_005",
+    "difficulty": "hard",
+    "topic": "dau",
+    "requester": "운영팀",
+    "question": "2025년 11월 한 달 동안의 일별 활성 사용자 수(DAU)를 집계해주세요. 각 날짜별로 고유한 사용자의 수를 계산해야 합니다. 결과를 날짜 순으로 정렬해주세요.",
+    "context": "서비스 안정성 및 사용자 참여도를 파악하기 위해 2025년 11월의 일별 활성 사용자 수를 분석해야 합니다.",
+    "submission_requirements": "결과는 'date' (날짜)와 'daily_active_users' (일별 활성 사용자 수) 컬럼으로 구성되어야 합니다. 'date' 컬럼 기준으로 오름차순 정렬해주세요.",
+    "answer_sql": "SELECT date, COUNT(DISTINCT user_id) AS daily_active_users FROM stream_events WHERE event_time BETWEEN '2025-11-01 00:00:00' AND '2025-11-30 23:59:59' GROUP BY date::DATE ORDER BY date ASC;",
+    "expected_columns": [
+      "date",
+      "daily_active_users"
+    ],
+    "sort_keys": [
+      "date"
+    ]
+  },
+  {
+    "problem_id": "stream_sql_006",
+    "difficulty": "hard",
+    "topic": "funnel",
+    "requester": "데이터 분석팀",
+    "question": "2025년 10월 1일부터 11월 30일까지 'view_product' 이벤트 이후 'add_to_cart' 이벤트로 전환한 사용자 수와, 'add_to_cart' 이후 'purchase' 이벤트로 전환한 사용자 수를 각각 계산해주세요. 각 단계별 전환율을 함께 제시하여 사용자 행동 흐름을 분석하고 싶습니다. (각 이벤트는 동일 사용자에 대해 시간 순서대로 발생했다고 가정합니다.)",
+    "context": "특정 기간 동안 제품 조회에서 구매까지 이어지는 사용자 행동 패턴을 심층적으로 이해하고, 각 전환 단계에서의 병목 현상을 식별하여 최적화 전략 수립에 활용하고자 합니다.",
+    "submission_requirements": "결과는 'step' (전환 단계), 'users' (해당 단계 사용자 수), 'conversion_rate' (이전 단계 대비 전환율) 컬럼으로 구성되어야 합니다. 단계는 'view_product', 'add_to_cart', 'purchase' 순으로 나열되어야 하며, 'view_product' 단계의 전환율은 100%로 간주합니다. 'view_product'에서 'add_to_cart'로 전환한 사용자 수가 0인 경우 'add_to_cart' 단계의 전환율은 0%로 표시합니다.",
+    "answer_sql": "WITH relevant_events AS (\n    SELECT\n        user_id,\n        event_name,\n        event_time,\n        ROW_NUMBER() OVER (PARTITION BY user_id, event_name ORDER BY event_time) as rn\n    FROM stream_events\n    WHERE event_name IN ('view_product', 'add_to_cart', 'purchase')\n      AND event_time BETWEEN '2025-10-01 00:00:00' AND '2025-11-30 23:59:59'\n),\n\nuser_journey AS (\n    SELECT\n        user_id,\n        MAX(CASE WHEN event_name = 'view_product' THEN 1 ELSE 0 END) AS viewed_product,\n        MAX(CASE WHEN event_name = 'add_to_cart' THEN 1 ELSE 0 END) AS added_to_cart,\n        MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) AS purchased\n    FROM relevant_events\n    GROUP BY user_id\n),\n\nfunnel_steps AS (\n    SELECT\n        'view_product' AS step,\n        COUNT(user_id) AS users\n    FROM user_journey\n    WHERE viewed_product = 1\n\n    UNION ALL\n\n    SELECT\n        'add_to_cart' AS step,\n        COUNT(user_id) AS users\n    FROM user_journey\n    WHERE viewed_product = 1 AND added_to_cart = 1\n\n    UNION ALL\n\n    SELECT\n        'purchase' AS step,\n        COUNT(user_id) AS users\n    FROM user_journey\n    WHERE added_to_cart = 1 AND purchased = 1\n),\n\nranked_funnel AS (\n    SELECT\n        step,\n        users,\n        ROW_NUMBER() OVER (ORDER BY \n            CASE step \n                WHEN 'view_product' THEN 1 \n                WHEN 'add_to_cart' THEN 2 \n                WHEN 'purchase' THEN 3 \n            END\n        ) as step_order\n    FROM funnel_steps\n)\n\nSELECT \n    rf.step,\n    rf.users,\n    CASE \n        WHEN rf.step_order = 1 THEN 100.0 -- view_product는 시작점이므로 100%로 간주\n        ELSE \n            CASE \n                WHEN LAG(rf.users, 1, 1) OVER (ORDER BY rf.step_order) = 0 THEN 0.0 -- 이전 단계 사용자 수가 0이면 전환율 0%\n                ELSE ROUND((rf.users::FLOAT / LAG(rf.users, 1, 1) OVER (ORDER BY rf.step_order)::FLOAT) * 100.0, 2)\n            END\n    END AS conversion_rate\nFROM ranked_funnel rf\nORDER BY rf.step_order ASC;",
+    "expected_columns": [
+      "step",
+      "users",
+      "conversion_rate"
+    ],
+    "sort_keys": [
+      "step"
+    ]
+  }
+]

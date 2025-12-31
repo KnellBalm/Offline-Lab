@@ -1,0 +1,184 @@
+[
+  {
+    "problem_id": "saas_sql_001_set0",
+    "difficulty": "easy",
+    "topic": "activation",
+    "requester": "그로스팀",
+    "question": "안녕! 온보딩 완료 후 Feature Usage가 3회 이상 발생하는 Activation 기준을 정의하고, 2025년 11월 동안 Activation된 사용자 수를 파악하고 싶어. 'onboarding_complete' 이벤트 이후 7일 이내에 'feature_use' 이벤트가 3회 이상 발생한 경우를 Activation으로 정의할게. 해당 월의 Activation User 수를 알려줄 수 있을까?",
+    "context": "신규 사용자의 초기 활성화 단계를 정확히 이해하고, 온보딩 프로세스의 효율성을 평가하기 위함입니다. Activation 정의에 맞춰 초기 사용자 유입 및 활성화 추이를 파악하는 것이 목표입니다.",
+    "submission_requirements": "결과는 'activation_date' 컬럼을 기준으로 오름차순 정렬해주세요. 'activation_date'는 해당 월의 첫날로 통일합니다.",
+    "answer_sql": "WITH activated_users AS (\n    SELECT\n        pe1.user_id,\n        DATE_TRUNC('month', pe1.event_time)::DATE AS activation_date,\n        ROW_NUMBER() OVER(PARTITION BY pe1.user_id ORDER BY pe1.event_time) as rn_onboarding\n    FROM pa_events pe1\n    WHERE pe1.event_name = 'onboarding_complete'\n),\nfeature_usage_after_onboarding AS (\n    SELECT\n        pe2.user_id,\n        COUNT(pe2.event_id) AS feature_use_count,\n        MIN(pe2.event_time) AS first_feature_use_time\n    FROM pa_events pe2\n    WHERE pe2.event_name = 'feature_use'\n    GROUP BY pe2.user_id\n)\nSELECT\n    au.activation_date,\n    COUNT(DISTINCT au.user_id) AS activated_user_count\nFROM activated_users au\nJOIN feature_usage_after_onboarding fu ON au.user_id = fu.user_id\nWHERE\n    au.activation_date = '2025-11-01' AND \n    fu.feature_use_count >= 3 AND\n    fu.first_feature_use_time <= au.activation_date + INTERVAL '7 days'\nGROUP BY\n    au.activation_date\nORDER BY\n    au.activation_date;",
+    "expected_description": "월별로 Activation된 사용자 수",
+    "expected_columns": [
+      "activation_date",
+      "activated_user_count"
+    ],
+    "sort_keys": [
+      "activation_date"
+    ],
+    "hint": "CTE를 사용하여 onboarding_complete 이벤트와 feature_use 이벤트를 분리하고, 사용자별로 횟수를 집계한 후 조건에 맞게 조인합니다. 날짜 범위 조건에 유의하세요.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "activation_date",
+          "type": "date"
+        },
+        {
+          "name": "activated_user_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_001_set0"
+    }
+  },
+  {
+    "problem_id": "saas_sql_002_set0",
+    "difficulty": "easy",
+    "topic": "engagement",
+    "requester": "경영진",
+    "question": "안녕하세요. 2025년 12월의 주간 활성 사용자(WAU) 추이를 파악하고 싶습니다. North Star 지표인 WAU를 'feature_use' 이벤트 발생 기준으로 측정하고 싶으니, 2025년 12월 각 주의 WAU를 계산해주세요.",
+    "context": "플랫폼의 핵심적인 사용 현황을 파악하고, 비즈니스 성과를 측정하기 위한 가장 중요한 지표 중 하나인 WAU의 추세를 분석하고자 합니다.",
+    "submission_requirements": "결과는 'week' 컬럼 기준 오름차순으로 정렬해주세요. 'week'는 해당 주의 시작일(월요일)로 표기합니다. WAU는 중복되지 않은 고유 사용자 수를 의미합니다.",
+    "answer_sql": "SELECT\n    DATE_TRUNC('week', started_at)::DATE AS week,\n    COUNT(DISTINCT user_id) AS wau\nFROM pa_events\nWHERE\n    event_name = 'feature_use' AND\n    event_time >= '2025-12-01' AND\n    event_time < '2026-01-01'\nGROUP BY\n    week\nORDER BY\n    week;",
+    "expected_description": "2025년 12월 각 주의 주간 활성 사용자(WAU) 수",
+    "expected_columns": [
+      "week",
+      "wau"
+    ],
+    "sort_keys": [
+      "week"
+    ],
+    "hint": "pa_events 테이블에서 'feature_use' 이벤트만 필터링하고, DATE_TRUNC 함수를 사용하여 주 단위로 그룹화합니다. DISTINCT 키워드를 사용하여 중복 사용자를 제거합니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "error": "column \"started_at\" does not exist\nLINE 2:     DATE_TRUNC('week', started_at)::DATE AS week,\n                               ^\n"
+    }
+  },
+  {
+    "problem_id": "saas_sql_003_set0",
+    "difficulty": "medium",
+    "topic": "feature_adoption",
+    "requester": "PM팀",
+    "question": "안녕하세요. 저희 팀에서 최근 출시한 'data_export' 기능의 Adoption Rate를 측정하고 싶습니다. 2025년 11월에 가입한 사용자들 중에서 'export_data' 이벤트를 최소 한 번 이상 발생시킨 사용자의 비율을 계산해주세요. AARRR 퍼널 중 'Activation' 이후 'Retention' 단계의 핵심 지표로 활용하고 싶습니다.",
+    "context": "신규 기능의 사용자 채택률을 파악하여 기능의 성공 여부를 판단하고, 향후 기능 개선 및 마케팅 전략 수립에 필요한 인사이트를 얻기 위함입니다.",
+    "submission_requirements": "결과는 'adoption_rate' 컬럼으로 표기하며, 소수점 4자리까지 표시해주세요.",
+    "answer_sql": "WITH november_users AS (\n    SELECT\n        user_id\n    FROM pa_users\n    WHERE\n        signup_at >= '2025-11-01' AND signup_at < '2025-12-01'\n),\nusers_who_exported AS (\n    SELECT DISTINCT\n        pe.user_id\n    FROM pa_events pe\n    JOIN november_users nu ON pe.user_id = nu.user_id\n    WHERE\n        pe.event_name = 'export_data' AND\n        pe.event_time >= '2025-11-01' AND pe.event_time < '2025-12-01'\n)\nSELECT\n    ROUND(CAST(COUNT(uwe.user_id) AS NUMERIC) / COUNT(DISTINCT nu.user_id), 4) AS adoption_rate\nFROM november_users nu\nLEFT JOIN users_who_exported uwe ON nu.user_id = uwe.user_id;",
+    "expected_description": "2025년 11월 가입 사용자 중 'export_data' 기능을 사용한 사용자의 비율 (Adoption Rate)",
+    "expected_columns": [
+      "adoption_rate"
+    ],
+    "sort_keys": [],
+    "hint": "먼저 2025년 11월에 가입한 사용자를 필터링하고, 해당 기간 동안 'export_data' 이벤트를 발생시킨 사용자를 추출합니다. 이후 LEFT JOIN을 사용하여 전체 가입 사용자 대비 기능 사용 사용자 비율을 계산합니다. NULLIF를 사용하여 Division by Zero를 방지합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "adoption_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_003_set0"
+    }
+  },
+  {
+    "problem_id": "saas_sql_004_set0",
+    "difficulty": "medium",
+    "topic": "churn",
+    "requester": "CS팀",
+    "question": "안녕하세요. 저희 플랫폼에서 'cancel_subscription' 이벤트를 발생시키기 전에 특정 행동 패턴을 보이는 사용자들을 식별하고 싶습니다. 'cancel_subscription' 발생 7일 전부터 해당 이벤트 발생 시점까지, 'support_ticket' 이벤트가 1회 이상 발생하거나 'downgrade_plan' 이벤트가 1회 이상 발생한 사용자의 user_id 목록을 알려주세요. Churn 위험 고객을 사전 식별하는 데 사용될 예정입니다.",
+    "context": "고객 이탈(Churn)의 징후를 조기에 감지하여 선제적인 고객 지원 및 유지 활동을 수행함으로써 이탈률을 감소시키고자 합니다.",
+    "submission_requirements": "결과는 'user_id' 컬럼 기준 오름차순으로 정렬해주세요. 'cancel_subscription' 이벤트가 발생하지 않은 사용자는 결과에서 제외합니다.",
+    "answer_sql": "WITH cancelled_users AS (\n    SELECT\n        user_id,\n        event_time AS cancel_time\n    FROM pa_events\n    WHERE event_name = 'cancel_subscription'\n),\npre_churn_activity AS (\n    SELECT\n        pe.user_id\n    FROM pa_events pe\n    JOIN cancelled_users cu ON pe.user_id = cu.user_id\n    WHERE\n        pe.event_time BETWEEN cu.cancel_time - INTERVAL '7 days' AND cu.cancel_time AND\n        (pe.event_name = 'support_ticket' OR pe.event_name = 'downgrade_plan')\n    GROUP BY pe.user_id\n)\nSELECT DISTINCT\n    pca.user_id\nFROM pre_churn_activity pca\nORDER BY\n    pca.user_id;",
+    "expected_description": "'cancel_subscription' 이벤트 발생 전 7일 이내에 'support_ticket' 또는 'downgrade_plan' 이벤트를 발생시킨 사용자 ID 목록",
+    "expected_columns": [
+      "user_id"
+    ],
+    "sort_keys": [
+      "user_id"
+    ],
+    "hint": "먼저 'cancel_subscription' 이벤트를 기록한 사용자와 시간을 CTE로 분리합니다. 이후 해당 사용자들이 취소 시간 기준 7일 전부터 취소 시간 사이에 'support_ticket' 또는 'downgrade_plan' 이벤트를 발생시켰는지 확인하는 조건을 적용합니다. GROUP BY와 DISTINCT를 사용하여 중복을 제거합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 85,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_004_set0"
+    }
+  },
+  {
+    "problem_id": "saas_sql_005_set0",
+    "difficulty": "hard",
+    "topic": "upgrade",
+    "requester": "세일즈팀",
+    "question": "안녕하세요. 저희 플랫폼의 'upgrade_plan' 이벤트를 발생시키기 전에 특정 행동 패턴을 보인 사용자 그룹을 분석하고 싶습니다. 'upgrade_plan' 이벤트 발생 14일 전부터 해당 이벤트 발생 시점까지 'create_project' 이벤트가 5회 이상 발생하고, 'invite_member' 이벤트가 3회 이상 발생한 사용자의 user_id 목록을 제공해주세요. Upgrade 가능성이 높은 계정을 식별하는 데 활용할 예정입니다.",
+    "context": "유료 플랜으로의 전환(Upgrade) 가능성이 높은 사용자 행동 패턴을 파악하여, 세일즈 팀의 타겟팅 전략을 고도화하고 전환율을 높이기 위함입니다.",
+    "submission_requirements": "결과는 'user_id' 컬럼 기준으로 내림차순 정렬해주세요.",
+    "answer_sql": "WITH upgraded_users AS (\n    SELECT\n        user_id,\n        event_time AS upgrade_time\n    FROM pa_events\n    WHERE event_name = 'upgrade_plan'\n),\npre_upgrade_activity AS (\n    SELECT\n        pe.user_id,\n        COUNT(CASE WHEN pe.event_name = 'create_project' THEN 1 END) AS create_project_count,\n        COUNT(CASE WHEN pe.event_name = 'invite_member' THEN 1 END) AS invite_member_count\n    FROM pa_events pe\n    JOIN upgraded_users uu ON pe.user_id = uu.user_id\n    WHERE\n        pe.event_time BETWEEN uu.upgrade_time - INTERVAL '14 days' AND uu.upgrade_time\n    GROUP BY\n        pe.user_id\n)\nSELECT\n    pua.user_id\nFROM pre_upgrade_activity pua\nWHERE\n    pua.create_project_count >= 5 AND pua.invite_member_count >= 3\nORDER BY\n    pua.user_id DESC;",
+    "expected_description": "'upgrade_plan' 이벤트 발생 14일 전부터 해당 이벤트 발생 시점까지 'create_project' 5회 이상, 'invite_member' 3회 이상 발생한 사용자 ID 목록",
+    "expected_columns": [
+      "user_id"
+    ],
+    "sort_keys": [
+      "user_id"
+    ],
+    "hint": "CTE를 사용하여 'upgrade_plan' 이벤트를 기록한 사용자와 시간을 분리합니다. 이후 해당 사용자들이 업그레이드 시간 기준 14일 전부터 업그레이드 시간 사이에 'create_project'와 'invite_member' 이벤트를 각각 얼마나 발생시켰는지 집계합니다. 마지막으로 집계된 횟수를 기준으로 필터링합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 0,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_005_set0"
+    }
+  },
+  {
+    "problem_id": "saas_sql_006_set0",
+    "difficulty": "hard",
+    "topic": "cohort",
+    "requester": "마케팅팀",
+    "question": "안녕하세요. 코호트 분석을 통해 사용자 유지율을 파악하고 싶습니다. 2025년 10월 29일부터 2025년 12월 28일까지 가입한 사용자들을 월별 코호트로 나누고, 각 코호트별로 가입 후 1개월, 2개월 시점에서의 'dashboard_view' 이벤트 발생률을 계산해주세요. Retention을 중심으로 분석하고 싶습니다.",
+    "context": "사용자 코호트별 유지율 추세를 분석하여 장기적인 사용자 행동 패턴과 플랫폼 가치 변화를 이해하고, Retention 전략의 효과를 측정하기 위함입니다.",
+    "submission_requirements": "결과는 'cohort_month' 기준 오름차순, 'retention_month' 기준 오름차순으로 정렬해주세요. 'cohort_month'는 YYYY-MM 형식으로 표기합니다. 'retention_month'는 가입 후 경과 개월 수를 나타냅니다.",
+    "answer_sql": "WITH cohort_definition AS (\n    SELECT\n        user_id,\n        DATE_TRUNC('month', signup_at)::DATE AS cohort_month\n    FROM pa_users\n    WHERE\n        signup_at >= '2025-10-29' AND signup_at < '2025-12-29'\n),\nmonthly_activity AS (\n    SELECT\n        user_id,\n        DATE_TRUNC('month', event_time)::DATE AS activity_month\n    FROM pa_events\n    WHERE event_name = 'dashboard_view'\n),\ncohort_retention AS (\n    SELECT\n        cd.cohort_month,\n        DATE_TRUNC('month', ma.activity_month)::DATE AS retention_month,\n        COUNT(DISTINCT cd.user_id) AS active_users\n    FROM cohort_definition cd\n    JOIN monthly_activity ma ON cd.user_id = ma.user_id\n    WHERE\n        DATE_TRUNC('month', ma.activity_month) >= DATE_TRUNC('month', cd.cohort_month) AND\n        DATE_TRUNC('month', ma.activity_month) < DATE_TRUNC('month', cd.cohort_month) + INTERVAL '2 months'\n    GROUP BY\n        cd.cohort_month,\n        DATE_TRUNC('month', ma.activity_month)\n),\ncohort_size AS (\n    SELECT\n        cohort_month,\n        COUNT(DISTINCT user_id) AS total_users\n    FROM cohort_definition\n    GROUP BY cohort_month\n)\nSELECT\n    TO_CHAR(cr.cohort_month, 'YYYY-MM') AS cohort_month,\n    EXTRACT(MONTH FROM AGE(cr.retention_month, cr.cohort_month)) AS retention_month,\n    ROUND(CAST(cr.active_users AS NUMERIC) / cs.total_users * 100, 2) AS retention_rate\nFROM cohort_retention cr\nJOIN cohort_size cs ON cr.cohort_month = cs.cohort_month\nORDER BY\n    cr.cohort_month,\n    retention_month;",
+    "expected_description": "가입 월별(cohort_month)로 1개월, 2개월 시점에서의 'dashboard_view' 이벤트 발생 사용자 비율 (retention_rate)",
+    "expected_columns": [
+      "cohort_month",
+      "retention_month",
+      "retention_rate"
+    ],
+    "sort_keys": [
+      "cohort_month",
+      "retention_month"
+    ],
+    "hint": "먼저 사용자별 가입 월(cohort_month)을 정의하는 CTE를 만듭니다. 'dashboard_view' 이벤트가 발생한 월(activity_month)을 집계하는 CTE를 만들고, 두 CTE를 조인하여 코호트별 활동 월을 계산합니다. 코호트 크기를 계산하는 CTE를 별도로 만들고, 이를 이용하여 유지율(retention_rate)을 계산합니다. AGE 함수와 EXTRACT를 사용하여 개월 수를 계산합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 6,
+      "columns": [
+        {
+          "name": "cohort_month",
+          "type": "text"
+        },
+        {
+          "name": "retention_month",
+          "type": "numeric"
+        },
+        {
+          "name": "retention_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_saas_sql_006_set0"
+    }
+  }
+]

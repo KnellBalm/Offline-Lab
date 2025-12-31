@@ -55,3 +55,6 @@ class UserStats(BaseModel):
     correct: int
     accuracy: float
     next_level_threshold: int
+    score: int = 0
+    level_progress: int = 0
+

@@ -1,0 +1,161 @@
+/* frontend/src/components/LoginModal.css */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.modal-content h2 {
+    margin: 0 0 1.5rem;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.error-message {
+    color: var(--error-color);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: rgba(220, 53, 69, 0.1);
+    border-radius: 4px;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+}
+
+.btn-primary:disabled {
+    background: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    margin: 1.5rem 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.divider span {
+    padding: 0 1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.social-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.btn-google,
+.btn-kakao {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background 0.2s;
+}
+
+.btn-google:hover,
+.btn-kakao:hover {
+    background: var(--bg-tertiary);
+}
+
+.mode-switch {
+    margin-top: 1.5rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.mode-switch button {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.mode-switch button:hover {
+    text-decoration: underline;
+}

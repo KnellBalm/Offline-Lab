@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { SQLEditor } from '../components/SQLEditor';
 import { TableSchema } from '../components/TableSchema';
 import { ResultTable } from '../components/ResultTable';
-import { problemsApi, sqlApi, statsApi } from '../api/client';
+import { problemsApi, sqlApi } from '../api/client';
 import { analytics } from '../services/analytics';
 import type { Problem, TableSchema as Schema, SQLExecuteResponse, SubmitResponse } from '../types';
 import './Workspace.css';
@@ -36,11 +36,10 @@ export function Workspace({ dataType }: WorkspaceProps) {
     const [submitting, setSubmitting] = useState(false);
     const [hinting, setHinting] = useState(false);
     const [hint, setHint] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'problem' | 'schema' | 'history'>('problem');
+    const [activeTab, setActiveTab] = useState<'problem' | 'schema'>('problem');
     const [leftWidth, setLeftWidth] = useState(45);
-    const [editorHeight, setEditorHeight] = useState(400); // 기본 높이 - 약 50%
+    const [editorHeight, setEditorHeight] = useState(600); // 기본 높이 600px
     const [completedStatus, setCompletedStatus] = useState<CompletedStatus>({});
-    const [history, setHistory] = useState<any[]>([]);
     const resizerRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const rightPanelRef = useRef<HTMLDivElement>(null);
@@ -96,7 +95,7 @@ export function Workspace({ dataType }: WorkspaceProps) {
 
     useEffect(() => {
         if (selectedProblem) {
-            analytics.problemStart(
+            analytics.problemViewed(
                 selectedProblem.problem_id,
                 selectedProblem.difficulty,
                 selectedProblem.topic || 'unknown',
@@ -104,25 +103,6 @@ export function Workspace({ dataType }: WorkspaceProps) {
             );
         }
     }, [selectedProblem, dataType]);
-
-    // 기록 탭 API에서 로드 (성적 페이지와 동기화)
-    useEffect(() => {
-        if (activeTab === 'history') {
-            statsApi.history(20, dataType)
-                .then(res => {
-                    const formatted = res.data.map((h: any, idx: number) => ({
-                        problem_id: h.problem_id,
-                        problem_num: idx + 1,
-                        sql: '',  // API에서 sql 미제공
-                        is_correct: h.is_correct,
-                        feedback: h.feedback,
-                        submitted_at: h.submitted_at ? new Date(h.submitted_at).toLocaleString() : ''
-                    }));
-                    setHistory(formatted);
-                })
-                .catch(() => setHistory([]));
-        }
-    }, [activeTab, dataType]);
 
     // SQL 실행
     const handleExecute = useCallback(async () => {
@@ -134,11 +114,11 @@ export function Workspace({ dataType }: WorkspaceProps) {
             const res = await sqlApi.execute(sql);
             setResult(res.data);
             // Analytics: SQL 실행 성공
-            analytics.sqlExecute(sql.length, false);
+            analytics.sqlExecuted(sql.length, 0, false);
         } catch (error: any) {
             setResult({ success: false, error: error.message });
             // Analytics: SQL 실행 실패
-            analytics.sqlExecute(sql.length, true, error.message);
+            analytics.sqlExecuted(sql.length, 0, true, error.message);
         }
         setLoading(false);
     }, [sql]);
@@ -163,17 +143,8 @@ export function Workspace({ dataType }: WorkspaceProps) {
             setCompletedStatus(newStatus);
             localStorage.setItem(`completed_${dataType}`, JSON.stringify(newStatus));
 
-            setHistory(prev => [{
-                problem_id: selectedProblem.problem_id,
-                problem_num: selectedIndex + 1,
-                sql: sql,
-                is_correct: res.data.is_correct,
-                feedback: res.data.feedback,
-                submitted_at: new Date().toLocaleTimeString()
-            }, ...prev].slice(0, 20));
-
             // Analytics: 문제 제출
-            analytics.problemSubmit(
+            analytics.problemSubmitted(
                 selectedProblem.problem_id,
                 res.data.is_correct,
                 1, // attempt number (simplified)
@@ -238,7 +209,7 @@ export function Workspace({ dataType }: WorkspaceProps) {
         const handleMouseMove = (e: MouseEvent) => {
             const rightPanelRect = rightPanel.getBoundingClientRect();
             const newHeight = e.clientY - rightPanelRect.top;
-            setEditorHeight(Math.min(Math.max(newHeight, 150), 600));
+            setEditorHeight(Math.min(Math.max(newHeight, 150), rightPanelRect.height - 100));
         };
 
         const handleMouseUp = () => {
@@ -268,11 +239,8 @@ export function Workspace({ dataType }: WorkspaceProps) {
                     <button className={activeTab === 'problem' ? 'active' : ''} onClick={() => setActiveTab('problem')}>
                         📌 문제
                     </button>
-                    <button className={activeTab === 'schema' ? 'active' : ''} onClick={() => { setActiveTab('schema'); analytics.track('tab_change', { tab: 'schema', data_type: dataType }); }}>
+                    <button className={activeTab === 'schema' ? 'active' : ''} onClick={() => { setActiveTab('schema'); analytics.schemaViewed(dataType); }}>
                         📋 스키마
-                    </button>
-                    <button className={activeTab === 'history' ? 'active' : ''} onClick={() => { setActiveTab('history'); analytics.track('tab_change', { tab: 'history', data_type: dataType }); }}>
-                        📜 기록
                     </button>
                 </div>
 
@@ -345,31 +313,8 @@ export function Workspace({ dataType }: WorkspaceProps) {
                             </div>
                         )}
                     </div>
-                ) : activeTab === 'schema' ? (
-                    <TableSchema tables={tables} />
                 ) : (
-                    <div className="history-panel">
-                        <div className="history-header">
-                            <h3>📜 제출 기록</h3>
-                            <span className="data-info">{dataType.toUpperCase()} 데이터셋</span>
-                        </div>
-                        {history.length === 0 ? (
-                            <div className="no-history">아직 제출 기록이 없습니다.</div>
-                        ) : (
-                            <div className="history-list">
-                                {history.map((h, i) => (
-                                    <div key={i} className={`history-item ${h.is_correct ? 'correct' : 'wrong'}`}>
-                                        <div className="history-meta">
-                                            <span className="history-status">{h.is_correct ? '✅' : '❌'}</span>
-                                            <span className="history-problem">문제 {h.problem_num}</span>
-                                            <span className="history-time">{h.submitted_at}</span>
-                                        </div>
-                                        <pre className="history-sql">{h.sql.slice(0, 100)}{h.sql.length > 100 ? '...' : ''}</pre>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <TableSchema tables={tables} />
                 )}
             </div>
 

@@ -1,0 +1,127 @@
+[
+  {
+    "problem_id": "stream_sql_001",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "마케팅팀",
+    "question": "2025년 7월 1일부터 2025년 7월 31일까지 일별 매출과 구매 건수를 조회해 주세요. 집계된 데이터는 매출이 높은 순서대로 정렬 부탁드립니다.",
+    "context": "마케팅 캠페인 성과 분석을 위해 특정 기간 동안의 일별 매출 및 구매 데이터를 확인해야 합니다. 이 데이터를 통해 어떤 날짜에 마케팅 활동이 효과적이었는지 파악하고 싶습니다.",
+    "submission_requirements": "컬럼명은 date, revenue, purchases로 제공하며, date 컬럼을 기준으로 오름차순 정렬하여 제출해주세요.",
+    "answer_sql": "SELECT date, revenue, purchases FROM stream_daily_metrics WHERE date BETWEEN '2025-07-01' AND '2025-07-31' ORDER BY revenue DESC;",
+    "expected_columns": [
+      "date",
+      "revenue",
+      "purchases"
+    ],
+    "sort_keys": [
+      "revenue"
+    ],
+    "hint": "stream_daily_metrics 테이블의 date 컬럼을 사용하여 기간을 필터링하고, revenue 컬럼을 기준으로 내림차순 정렬하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_001"
+    }
+  },
+  {
+    "problem_id": "stream_sql_002",
+    "difficulty": "easy",
+    "topic": "dau",
+    "requester": "데이터 분석팀",
+    "question": "2025년 10월 15일의 DAU(Daily Active Users)를 계산해주세요. DAU는 해당 날짜에 'visit' 이벤트를 발생시킨 고유한 사용자 수를 의미합니다.",
+    "context": "일별 사용자 활동 수준을 파악하는 것은 서비스의 건강성을 측정하는 중요한 지표입니다. 특정 날짜의 DAU를 확인함으로써 트래픽 패턴을 이해할 수 있습니다.",
+    "submission_requirements": "결과는 'dau'라는 컬럼명으로 제공하며, 단일 행으로 반환해주세요.",
+    "answer_sql": "SELECT COUNT(DISTINCT user_id) AS dau FROM stream_events WHERE event_name = 'visit' AND DATE(event_time) = '2025-10-15';",
+    "expected_columns": [
+      "dau"
+    ],
+    "sort_keys": [],
+    "hint": "stream_events 테이블에서 event_name이 'visit'인 이벤트만 필터링하고, event_time의 날짜 부분이 '2025-10-15'인 경우를 추출한 후, user_id의 고유한 개수를 세세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_002"
+    }
+  },
+  {
+    "problem_id": "stream_sql_003",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "제품팀",
+    "question": "장바구니에 상품을 담은 후(add_to_cart) 실제 구매(purchase)까지 완료한 사용자 비율을 계산해주세요. 이 전환율은 전체 'add_to_cart' 이벤트 수를 기준으로 계산합니다. 소수점 둘째 자리까지 반올림하여 표시해주세요.",
+    "context": "사용자가 장바구니에 상품을 담고 실제 구매로 이어지는 과정은 핵심적인 구매 퍼널입니다. 이 전환율을 분석하여 구매 과정의 문제점을 파악하고 개선 방안을 모색하고자 합니다.",
+    "submission_requirements": "계산된 전환율은 'purchase_conversion_rate'라는 컬럼명으로 제공하며, 단일 행으로 반환해주세요. 소수점 둘째 자리까지 반올림해주세요.",
+    "answer_sql": "SELECT ROUND(CAST(COUNT(DISTINCT CASE WHEN se.event_name = 'purchase' THEN se.user_id ELSE NULL END) AS NUMERIC) / COUNT(DISTINCT CASE WHEN se.event_name = 'add_to_cart' THEN se.user_id ELSE NULL END), 2) AS purchase_conversion_rate FROM stream_events se WHERE se.event_name IN ('add_to_cart', 'purchase');",
+    "expected_columns": [
+      "purchase_conversion_rate"
+    ],
+    "sort_keys": [],
+    "hint": "먼저 'add_to_cart' 이벤트를 발생시킨 고유 사용자 수를 세고, 'purchase' 이벤트를 발생시킨 고유 사용자 수를 센 후, 이 두 값의 비율을 계산하세요. ROUND 함수를 사용하여 소수점 둘째 자리까지 반올림합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_003"
+    }
+  },
+  {
+    "problem_id": "stream_sql_004",
+    "difficulty": "medium",
+    "topic": "channel",
+    "requester": "마케팅팀",
+    "question": "각 채널별로 발생한 'purchase' 이벤트 수를 조회하고, 이를 총 'purchase' 이벤트 수 대비 비율로 계산해주세요. 결과는 채널별 구매 비율이 높은 순서대로 정렬해주세요. 비율은 소수점 넷째 자리까지 표시합니다.",
+    "context": "마케팅 채널의 효율성을 평가하기 위해 각 채널에서 발생하는 실제 구매 수를 분석하고 싶습니다. 이를 통해 어떤 채널이 매출 증대에 가장 크게 기여하는지 파악할 수 있습니다.",
+    "submission_requirements": "컬럼명은 channel, purchase_count, purchase_ratio로 제공하며, purchase_ratio 컬럼을 기준으로 내림차순 정렬하여 제출해주세요. purchase_ratio는 소수점 넷째 자리까지 표시합니다.",
+    "answer_sql": "WITH ChannelPurchases AS ( SELECT channel, COUNT(DISTINCT session_id) AS purchase_count FROM stream_events WHERE event_name = 'purchase' GROUP BY channel ), TotalPurchases AS ( SELECT COUNT(DISTINCT session_id) AS total_purchase_count FROM stream_events WHERE event_name = 'purchase' ) SELECT cp.channel, cp.purchase_count, ROUND(CAST(cp.purchase_count AS NUMERIC) / tp.total_purchase_count, 4) AS purchase_ratio FROM ChannelPurchases cp, TotalPurchases tp ORDER BY purchase_ratio DESC;",
+    "expected_columns": [
+      "channel",
+      "purchase_count",
+      "purchase_ratio"
+    ],
+    "sort_keys": [
+      "purchase_ratio"
+    ],
+    "hint": "먼저 각 채널별 'purchase' 이벤트 수를 집계하는 CTE를 생성하고, 전체 'purchase' 이벤트 수를 집계하는 CTE를 생성합니다. 그 후, 두 CTE를 조인하여 채널별 구매 비율을 계산하고, 비율 기준으로 내림차순 정렬하세요.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_004"
+    }
+  },
+  {
+    "problem_id": "stream_sql_005",
+    "difficulty": "hard",
+    "topic": "funnel",
+    "requester": "데이터 분석팀",
+    "question": "각 디바이스 유형(device)별로 'view_product' 이벤트 이후 'add_to_cart' 이벤트로 전환한 사용자 비율을 계산해주세요. 또한, 'add_to_cart' 이후 'purchase' 이벤트로 전환한 사용자 비율도 함께 계산해주세요. 각 비율은 해당 단계의 고유 사용자 수를 기준으로 계산하며, 결과는 두 전환율이 모두 높은 순서대로 정렬해주세요. 비율은 소수점 셋째 자리까지 반올림합니다.",
+    "context": "제품 탐색부터 구매까지 이어지는 과정에서 디바이스별 사용자 경험 차이를 분석하고 싶습니다. 어떤 디바이스에서 전환율이 높거나 낮은지 파악하여 사용자 경험 개선에 활용하고자 합니다.",
+    "submission_requirements": "컬럼명은 device, view_to_add_to_cart_rate, add_to_cart_to_purchase_rate로 제공하며, 두 전환율을 합산한 값을 기준으로 내림차순 정렬하여 제출해주세요. 비율은 소수점 셋째 자리까지 반올림합니다.",
+    "answer_sql": "WITH DeviceEventCounts AS ( SELECT device, COUNT(DISTINCT CASE WHEN event_name = 'view_product' THEN user_id END) AS view_count, COUNT(DISTINCT CASE WHEN event_name = 'add_to_cart' THEN user_id END) AS add_to_cart_count, COUNT(DISTINCT CASE WHEN event_name = 'purchase' THEN user_id END) AS purchase_count FROM stream_events WHERE event_name IN ('view_product', 'add_to_cart', 'purchase') GROUP BY device ), DeviceConversionRates AS ( SELECT device, CASE WHEN view_count > 0 THEN ROUND(CAST(add_to_cart_count AS NUMERIC) / view_count, 3) ELSE 0 END AS view_to_add_to_cart_rate, CASE WHEN add_to_cart_count > 0 THEN ROUND(CAST(purchase_count AS NUMERIC) / add_to_cart_count, 3) ELSE 0 END AS add_to_cart_to_purchase_rate FROM DeviceEventCounts ) SELECT device, view_to_add_to_cart_rate, add_to_cart_to_purchase_rate FROM DeviceConversionRates ORDER BY (view_to_add_to_cart_rate + add_to_cart_to_purchase_rate) DESC;",
+    "expected_columns": [
+      "device",
+      "view_to_add_to_cart_rate",
+      "add_to_cart_to_purchase_rate"
+    ],
+    "sort_keys": [
+      "view_to_add_to_cart_rate",
+      "add_to_cart_to_purchase_rate"
+    ],
+    "hint": "먼저 각 디바이스별로 'view_product', 'add_to_cart', 'purchase' 이벤트의 고유 사용자 수를 집계합니다. 그 후, 이 집계 결과를 바탕으로 각 전환율을 계산하고, 두 전환율의 합계를 기준으로 내림차순 정렬합니다. 0으로 나누는 것을 방지하기 위해 CASE 문을 사용해야 합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_005"
+    }
+  },
+  {
+    "problem_id": "stream_sql_006",
+    "difficulty": "hard",
+    "topic": "dau",
+    "requester": "경영진",
+    "question": "2025년 11월 1일부터 2025년 11월 30일까지의 월간 활성 사용자(MAU: Monthly Active Users)와 해당 기간의 일별 평균 활성 사용자(DAU: Daily Active Users)를 계산해주세요. DAU는 'visit' 이벤트를 기준으로 계산합니다. MAU는 해당 월에 한 번이라도 'visit' 이벤트를 발생시킨 고유 사용자 수를 의미합니다.",
+    "context": "월간 전체 사용자 활동 추이와 일평균 사용자 활동 수준을 동시에 파악하여 서비스의 전반적인 성장세를 이해하고 싶습니다. 이는 장기적인 비즈니스 전략 수립에 중요한 기초 데이터를 제공할 것입니다.",
+    "submission_requirements": "컬럼명은 month, mau, avg_dau로 제공하며, month 컬럼을 기준으로 오름차순 정렬하여 제출해주세요.",
+    "answer_sql": "SELECT DATE_TRUNC('month', date)::DATE AS month, COUNT(DISTINCT user_id) FILTER (WHERE event_name = 'visit' AND DATE(event_time) BETWEEN '2025-11-01' AND '2025-11-30') AS mau, AVG(daily_dau.dau) AS avg_dau FROM stream_events LEFT JOIN (SELECT DATE(event_time) AS date, COUNT(DISTINCT user_id) AS dau FROM stream_events WHERE event_name = 'visit' GROUP BY DATE(event_time)) AS daily_dau ON DATE(event_time) = daily_dau.date WHERE DATE(event_time) BETWEEN '2025-11-01' AND '2025-11-30' GROUP BY DATE_TRUNC('month', date) ORDER BY month;",
+    "expected_columns": [
+      "month",
+      "mau",
+      "avg_dau"
+    ],
+    "sort_keys": [
+      "month"
+    ],
+    "hint": "먼저 'visit' 이벤트만을 대상으로 각 날짜별 DAU를 계산하는 서브쿼리를 만듭니다. 그 후, 메인 쿼리에서 11월 전체 기간의 'visit' 이벤트에 참여한 고유 사용자 수를 세어 MAU를 계산하고, 서브쿼리에서 계산된 일별 DAU의 평균을 계산하여 avg_dau를 구합니다. DATE_TRUNC 함수를 사용하여 월별로 집계합니다.",
+    "expected_meta": {
+      "grading_table": "expected_stream_sql_006"
+    }
+  }
+]

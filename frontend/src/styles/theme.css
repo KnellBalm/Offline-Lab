@@ -1,0 +1,51 @@
+/* frontend/src/styles/theme.css */
+/* 라이트/다크 모드 CSS 변수 */
+
+:root {
+    /* Light mode (default) */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e9ecef;
+    --text-primary: #333333;
+    --text-secondary: #555555;
+    --text-muted: #777777;
+    --border-color: #e0e0e0;
+    --accent-color: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-light: #e7f1ff;
+    --success-color: #28a745;
+    --error-color: #dc3545;
+    --warning-color: #ffc107;
+    --header-bg: linear-gradient(135deg, #1a1a2e, #16213e);
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --result-table-header: #2563eb;
+    --editor-bg: #1e1e1e;
+}
+
+[data-theme="dark"] {
+    /* Dark mode */
+    --bg-primary: #1e1e2e;
+    --bg-secondary: #252536;
+    --bg-tertiary: #2d2d44;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --text-muted: #999999;
+    --border-color: #3a3a4a;
+    --accent-color: #3b82f6;
+    --accent-hover: #60a5fa;
+    --accent-light: rgba(59, 130, 246, 0.2);
+    --success-color: #22c55e;
+    --error-color: #ef4444;
+    --warning-color: #f59e0b;
+    --header-bg: linear-gradient(135deg, #0f0f1a, #1a1a2e);
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --result-table-header: #3b82f6;
+    --editor-bg: #0d0d14;
+}
+
+/* 전역 스타일에 변수 적용 */
+body {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}

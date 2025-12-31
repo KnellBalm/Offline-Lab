@@ -1,0 +1,223 @@
+[
+  {
+    "problem_id": "ecommerce_sql_001_set1",
+    "difficulty": "easy",
+    "topic": "revenue",
+    "requester": "경영진",
+    "question": "안녕하세요, 경영진 여러분. 2025년 11월 한 달 동안의 일별 총 거래액(GMV) 추이를 파악하고자 합니다. 각 날짜별로 총 주문 금액 합계를 보여주세요. 결과는 날짜 오름차순으로 정렬해주시면 감사하겠습니다.",
+    "context": "월별 비즈니스 성과를 파악하고 예측 모델링에 활용하기 위해 일별 거래액 추이를 분석해야 합니다. 특히 11월은 연말 쇼핑 시즌의 시작점으로, 해당 월의 흐름을 파악하는 것이 중요합니다.",
+    "submission_requirements": "결과는 'order_date'와 'daily_gmv' 두 개의 컬럼으로 구성하며, 'order_date' 기준 오름차순으로 정렬해야 합니다. 'daily_gmv'는 소수점 없이 정수로 표기합니다.",
+    "answer_sql": "SELECT DATE(order_time) AS order_date, SUM(amount) AS daily_gmv FROM pa_orders WHERE order_time >= '2025-11-01' AND order_time < '2025-12-01' GROUP BY DATE(order_time) ORDER BY order_date ASC;",
+    "expected_description": "각 날짜별로 해당 일에 발생한 총 주문 금액(GMV)을 보여줍니다.",
+    "expected_columns": [
+      "order_date",
+      "daily_gmv"
+    ],
+    "sort_keys": [
+      "order_date"
+    ],
+    "hint": "pa_orders 테이블의 order_time 컬럼을 사용하여 날짜별로 그룹화하고, amount 컬럼을 합산하세요. 날짜 조건은 2025년 11월 1일부터 11월 30일까지로 설정하세요.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 25,
+      "columns": [
+        {
+          "name": "order_date",
+          "type": "date"
+        },
+        {
+          "name": "daily_gmv",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_001_set1"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_002_set1",
+    "difficulty": "easy",
+    "topic": "activation",
+    "requester": "그로스팀",
+    "question": "그로스팀입니다. 2025년 12월에 가입한 신규 사용자 중 첫 구매를 완료한 사용자의 수를 파악하고 싶습니다. 결과는 숫자 하나로 알려주시면 됩니다.",
+    "context": "신규 사용자 확보 전략의 효과를 측정하고, 가입 후 첫 구매까지의 전환율을 이해하는 것은 매우 중요합니다. 12월 가입자의 활성화율을 파악하여 향후 마케팅 활동의 방향성을 설정하려고 합니다.",
+    "submission_requirements": "결과는 'new_user_first_purchase_count'라는 이름의 단일 컬럼으로 제공하며, 숫자로 표시됩니다.",
+    "answer_sql": "WITH FirstPurchase AS ( SELECT user_id, MIN(order_time) as first_order_time FROM pa_orders GROUP BY user_id ) SELECT COUNT(DISTINCT pu.user_id) AS new_user_first_purchase_count FROM pa_users pu JOIN FirstPurchase fp ON pu.user_id = fp.user_id WHERE pu.signup_at >= '2025-12-01' AND pu.signup_at < '2026-01-01' AND fp.first_order_time >= pu.signup_at;",
+    "expected_description": "2025년 12월에 가입한 사용자 중 첫 구매를 완료한 사용자 수를 나타냅니다.",
+    "expected_columns": [
+      "new_user_first_purchase_count"
+    ],
+    "sort_keys": [],
+    "hint": "pa_users 테이블에서 12월에 가입한 사용자를 필터링하고, pa_orders 테이블에서 각 사용자의 첫 주문 시간을 찾습니다. 이후 두 정보를 결합하여 조건을 만족하는 사용자 수를 세어보세요. 첫 주문 시간이 가입 시간보다 같거나 이후인 경우만 고려해야 합니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "new_user_first_purchase_count",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_002_set1"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_003_set1",
+    "difficulty": "medium",
+    "topic": "funnel",
+    "requester": "PM팀",
+    "question": "PM팀입니다. 'view_product' 이벤트 이후 'add_to_cart' 이벤트로 전환하는 사용자 비율을 분석하고 싶습니다. 2025년 11월 한 달 동안의 전환율을 계산해주세요. 결과는 'view_product_count', 'add_to_cart_count', 'conversion_rate' 컬럼으로 구성하고, 전환율은 소수점 셋째 자리에서 반올림하여 표기합니다.",
+    "context": "상품 상세 페이지 조회 후 장바구니 담기 단계에서의 사용자 행동을 이해하는 것은 상품 페이지 UI/UX 개선 및 마케팅 메시지 최적화에 중요합니다. 이 단계에서의 이탈률을 낮추는 것이 구매 전환율 상승의 핵심입니다.",
+    "submission_requirements": "결과는 'view_product_count', 'add_to_cart_count', 'conversion_rate' 컬럼으로 구성합니다. 'conversion_rate'는 소수점 셋째 자리에서 반올림하여 표기하며, 0으로 나누는 경우 0으로 표시해야 합니다.",
+    "answer_sql": "WITH EventCounts AS ( SELECT SUM(CASE WHEN event_name = 'view_product' THEN 1 ELSE 0 END) AS view_product_count, SUM(CASE WHEN event_name = 'add_to_cart' THEN 1 ELSE 0 END) AS add_to_cart_count FROM pa_events WHERE event_time >= '2025-11-01' AND event_time < '2025-12-01' AND event_name IN ('view_product', 'add_to_cart') ) SELECT view_product_count, add_to_cart_count, ROUND(CAST(add_to_cart_count AS NUMERIC) / NULLIF(view_product_count, 0) * 100, 2) AS conversion_rate FROM EventCounts;",
+    "expected_description": "2025년 11월 동안 'view_product' 이벤트 발생 횟수, 'add_to_cart' 이벤트 발생 횟수, 그리고 'view_product' 후 'add_to_cart'로 전환한 비율을 보여줍니다.",
+    "expected_columns": [
+      "view_product_count",
+      "add_to_cart_count",
+      "conversion_rate"
+    ],
+    "sort_keys": [],
+    "hint": "pa_events 테이블에서 2025년 11월의 'view_product'와 'add_to_cart' 이벤트를 필터링하세요. 각 이벤트의 발생 횟수를 세고, add_to_cart 횟수를 view_product 횟수로 나누어 전환율을 계산하세요. 0으로 나누는 경우를 방지하기 위해 NULLIF 함수를 사용하세요.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "view_product_count",
+          "type": "bigint"
+        },
+        {
+          "name": "add_to_cart_count",
+          "type": "bigint"
+        },
+        {
+          "name": "conversion_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_003_set1"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_004_set1",
+    "difficulty": "medium",
+    "topic": "retention",
+    "requester": "CX팀",
+    "question": "CX팀입니다. 장바구니에 상품을 담은 후 구매하지 않고 이탈한 사용자들의 행동 패턴을 이해하고 싶습니다. 2025년 10월 30일부터 12월 29일 사이, 장바구니에 상품을 담은 후 24시간 이내에 구매하지 않은 세션의 비율을 알고 싶습니다. 해당 기간 동안 'add_to_cart' 이벤트가 발생했지만 'purchase' 이벤트가 발생하지 않은 세션의 비율을 계산해주세요.",
+    "context": "장바구니 이탈은 매출 손실의 직접적인 원인이 됩니다. 어떤 세션에서 이탈이 많이 발생하는지 파악하여 이탈 방지 전략 수립에 활용하고 싶습니다.",
+    "submission_requirements": "결과는 'add_to_cart_sessions', 'abandoned_cart_sessions', 'abandonment_rate' 세 개의 컬럼으로 구성합니다. 'abandonment_rate'는 소수점 셋째 자리에서 반올림하여 표기하며, 0으로 나누는 경우 0으로 표시합니다.",
+    "answer_sql": "WITH SessionEvent AS ( SELECT session_id, MAX(CASE WHEN event_name = 'add_to_cart' THEN 1 ELSE 0 END) AS has_add_to_cart, MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) AS has_purchase FROM pa_events WHERE event_time BETWEEN '2025-10-30 00:00:00' AND '2025-12-29 23:59:59' GROUP BY session_id ), AddToCartSessions AS ( SELECT COUNT(session_id) AS total_add_to_cart_sessions FROM SessionEvent WHERE has_add_to_cart = 1 ), AbandonedCartSessions AS ( SELECT COUNT(session_id) AS total_abandoned_cart_sessions FROM SessionEvent WHERE has_add_to_cart = 1 AND has_purchase = 0 ) SELECT acs.total_add_to_cart_sessions AS add_to_cart_sessions, abs.total_abandoned_cart_sessions AS abandoned_cart_sessions, ROUND(CAST(abs.total_abandoned_cart_sessions AS NUMERIC) / NULLIF(acs.total_add_to_cart_sessions, 0) * 100, 2) AS abandonment_rate FROM AddToCartSessions acs, AbandonedCartSessions abs;",
+    "expected_description": "장바구니에 상품이 담긴 총 세션 수, 장바구니에 담긴 후 구매하지 않고 이탈한 세션 수, 그리고 장바구니 이탈율을 보여줍니다.",
+    "expected_columns": [
+      "add_to_cart_sessions",
+      "abandoned_cart_sessions",
+      "abandonment_rate"
+    ],
+    "sort_keys": [],
+    "hint": "pa_events 테이블에서 각 세션별로 'add_to_cart'와 'purchase' 이벤트 발생 여부를 파악합니다. 'add_to_cart'는 발생했지만 'purchase'는 발생하지 않은 세션 수를 계산하고, 이를 'add_to_cart' 이벤트가 발생한 총 세션 수로 나누어 이탈율을 계산하세요. 날짜 범위는 2025년 10월 30일부터 12월 29일까지로 설정하세요. NULLIF를 사용하여 0으로 나누는 경우를 방지해야 합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "add_to_cart_sessions",
+          "type": "bigint"
+        },
+        {
+          "name": "abandoned_cart_sessions",
+          "type": "bigint"
+        },
+        {
+          "name": "abandonment_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_004_set1"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_005_set1",
+    "difficulty": "hard",
+    "topic": "cohort",
+    "requester": "마케팅팀",
+    "question": "마케팅팀입니다. 쿠폰 적용 후 구매까지 이어지는 전환율을 분석하여 쿠폰 프로모션의 효과를 측정하고자 합니다. 2025년 11월에 'apply_coupon' 이벤트가 발생한 후, 같은 세션 내에서 'purchase' 이벤트가 발생한 사용자들의 전환율을 월별(가입 월 기준)로 보고 싶습니다. 즉, 각 사용자 그룹(가입 월별)의 쿠폰 사용 후 구매 전환율을 계산해주세요. 결과는 'signup_month', 'coupon_applied_purchases', 'total_coupon_applied_sessions', 'coupon_conversion_rate' 컬럼으로 구성합니다. 쿠폰 전환율은 소수점 셋째 자리에서 반올림합니다.",
+    "context": "어떤 채널 또는 프로모션을 통해 유입된 사용자들이 쿠폰을 잘 활용하여 구매까지 이어지는지 파악하는 것은 쿠폰 전략의 효율성을 높이는 데 필수적입니다. 사용자의 가입 월별로 나누어 분석하면 장기적인 쿠폰 활용 패턴을 이해하는 데 도움이 됩니다.",
+    "answer_sql": "WITH SessionCouponPurchase AS ( SELECT e.session_id, pu.signup_at, MAX(CASE WHEN e.event_name = 'apply_coupon' THEN 1 ELSE 0 END) AS applied_coupon, MAX(CASE WHEN e.event_name = 'purchase' THEN 1 ELSE 0 END) AS purchased FROM pa_events e JOIN pa_users pu ON e.user_id = pu.user_id WHERE e.event_time BETWEEN '2025-11-01' AND '2025-12-01' AND e.event_name IN ('apply_coupon', 'purchase') GROUP BY e.session_id, pu.signup_at ), UserSignupMonth AS ( SELECT session_id, DATE_TRUNC('month', signup_at) AS signup_month, applied_coupon, purchased FROM SessionCouponPurchase ), MonthlyCouponMetrics AS ( SELECT signup_month, COUNT(CASE WHEN applied_coupon = 1 AND purchased = 1 THEN session_id END) AS coupon_applied_purchases, COUNT(CASE WHEN applied_coupon = 1 THEN session_id END) AS total_coupon_applied_sessions FROM UserSignupMonth GROUP BY signup_month ) SELECT signup_month, coupon_applied_purchases, total_coupon_applied_sessions, ROUND(CAST(coupon_applied_purchases AS NUMERIC) / NULLIF(total_coupon_applied_sessions, 0) * 100, 2) AS coupon_conversion_rate FROM MonthlyCouponMetrics ORDER BY signup_month ASC;",
+    "expected_description": "각 사용자 그룹(가입 월 기준)별로 쿠폰 적용 후 구매한 세션 수, 쿠폰이 적용된 총 세션 수, 그리고 쿠폰 적용 후 구매 전환율을 보여줍니다.",
+    "expected_columns": [
+      "signup_month",
+      "coupon_applied_purchases",
+      "total_coupon_applied_sessions",
+      "coupon_conversion_rate"
+    ],
+    "sort_keys": [
+      "signup_month"
+    ],
+    "hint": "먼저 pa_events 테이블과 pa_users 테이블을 조인하여 각 세션별로 쿠폰 적용 여부와 구매 여부를 파악합니다. 사용자의 가입 월별로 그룹화하고, 각 그룹별로 쿠폰 적용 세션 수와 쿠폰 적용 후 구매 세션 수를 집계합니다. 마지막으로 전환율을 계산할 때 NULLIF를 사용하여 0으로 나누는 경우를 방지하세요. 날짜 범위는 2025년 11월 1일부터 12월 1일 전까지로 설정합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 2,
+      "columns": [
+        {
+          "name": "signup_month",
+          "type": "timestamp without time zone"
+        },
+        {
+          "name": "coupon_applied_purchases",
+          "type": "bigint"
+        },
+        {
+          "name": "total_coupon_applied_sessions",
+          "type": "bigint"
+        },
+        {
+          "name": "coupon_conversion_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_005_set1"
+    }
+  },
+  {
+    "problem_id": "ecommerce_sql_006_set1",
+    "difficulty": "hard",
+    "topic": "revenue",
+    "requester": "SCM팀",
+    "question": "SCM팀입니다. 재구매율이 높은 사용자의 특징을 파악하여 재고 관리 및 프로모션 전략에 활용하고자 합니다. 2025년 11월에 구매한 사용자 중 2025년 12월에도 구매한 사용자의 비율(재구매율)을 계산하고, 이를 사용자들의 가입 채널별로 비교해주세요. 결과는 'channel', 'total_november_purchasers', 'repeat_purchasers_december', 'repeat_purchase_rate' 컬럼으로 구성합니다. 재구매율은 소수점 셋째 자리에서 반올림합니다.",
+    "context": "단순히 재구매율을 파악하는 것을 넘어, 어떤 채널을 통해 유입된 사용자들이 재구매를 더 많이 하는지 이해하는 것은 채널별 투자 효율성을 높이고 고객 생애 가치(CLV)를 극대화하는 데 중요한 인사이트를 제공합니다.",
+    "answer_sql": "WITH NovemberPurchasers AS ( SELECT DISTINCT user_id FROM pa_orders WHERE order_time >= '2025-11-01' AND order_time < '2025-12-01' ), DecemberPurchasers AS ( SELECT DISTINCT user_id FROM pa_orders WHERE order_time >= '2025-12-01' AND order_time < '2026-01-01' ), ChannelNovemberPurchasers AS ( SELECT pu.channel, COUNT(DISTINCT np.user_id) AS total_november_purchasers FROM pa_users pu JOIN NovemberPurchasers np ON pu.user_id = np.user_id GROUP BY pu.channel ), ChannelDecemberRepeatPurchasers AS ( SELECT pu.channel, COUNT(DISTINCT dp.user_id) AS repeat_purchasers_december FROM pa_users pu JOIN DecemberPurchasers dp ON pu.user_id = dp.user_id WHERE pu.user_id IN (SELECT user_id FROM NovemberPurchasers) GROUP BY pu.channel ) SELECT cnp.channel, cnp.total_november_purchasers, COALESCE(cdrp.repeat_purchasers_december, 0) AS repeat_purchasers_december, ROUND(CAST(COALESCE(cdrp.repeat_purchasers_december, 0) AS NUMERIC) / NULLIF(cnp.total_november_purchasers, 0) * 100, 2) AS repeat_purchase_rate FROM ChannelNovemberPurchasers cnp LEFT JOIN ChannelDecemberRepeatPurchasers cdrp ON cnp.channel = cdrp.channel ORDER BY cnp.channel ASC;",
+    "expected_description": "가입 채널별로 11월에 구매한 총 사용자 수, 12월에 재구매한 사용자 수, 그리고 해당 채널의 재구매율을 보여줍니다.",
+    "expected_columns": [
+      "channel",
+      "total_november_purchasers",
+      "repeat_purchasers_december",
+      "repeat_purchase_rate"
+    ],
+    "sort_keys": [
+      "channel"
+    ],
+    "hint": "먼저 11월에 구매한 사용자 목록과 12월에 구매한 사용자 목록을 분리합니다. pa_users 테이블과 조인하여 각 채널별로 11월 구매자 수와 12월 재구매자 수를 집계합니다. 이후 LEFT JOIN을 사용하여 11월 구매자는 있지만 12월 재구매자는 없는 채널의 경우에도 0으로 표시되도록 처리하고, 재구매율을 계산하세요. COALESCE 함수를 사용하여 NULL 값을 0으로 처리하고, NULLIF를 사용하여 0으로 나누는 경우를 방지하세요. 날짜 조건은 2025년 11월 1일부터 12월 1일, 그리고 12월 1일부터 1월 1일 전까지로 설정합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 4,
+      "columns": [
+        {
+          "name": "channel",
+          "type": "text"
+        },
+        {
+          "name": "total_november_purchasers",
+          "type": "bigint"
+        },
+        {
+          "name": "repeat_purchasers_december",
+          "type": "bigint"
+        },
+        {
+          "name": "repeat_purchase_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_ecommerce_sql_006_set1"
+    }
+  }
+]

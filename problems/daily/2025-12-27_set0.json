@@ -1,0 +1,221 @@
+[
+  {
+    "problem_id": "community_sql_001_set0",
+    "difficulty": "easy",
+    "topic": "segmentation",
+    "requester": "PM팀",
+    "question": "안녕하세요 PM팀입니다. 최근 서비스 활성화 지표 개선을 위해 사용자들의 초기 활동 패턴을 파악하고 싶습니다. 각 사용자가 처음으로 'post_create' 이벤트를 발생시킨 날짜와 그때의 사용자 정보를 알려주세요. 해당 데이터는 최초 사용자 등록 시점부터 2025년 12월 27일까지의 데이터를 기준으로 합니다. 결과를 'post_create_date' 기준으로 오름차순 정렬해주세요.",
+    "context": "서비스 초기 단계에서 사용자들이 어떤 패턴으로 콘텐츠 생산을 시작하는지 이해하는 것은 핵심적인 온보딩 경험을 개선하고 활성화율을 높이는 데 중요합니다. 이 데이터를 통해 초기 콘텐츠 생산자들의 특성을 파악하고, 유사한 패턴을 가진 신규 사용자들의 활성화를 유도할 전략을 수립할 수 있습니다.",
+    "submission_requirements": "결과는 'user_id', 'post_create_date', 'country', 'channel' 컬럼을 포함해야 하며, 'post_create_date' 기준으로 오름차순 정렬해야 합니다. 'post_create_date'는 'YYYY-MM-DD' 형식의 DATE 타입으로 제공해주세요.",
+    "answer_sql": "WITH FirstPost AS (\n    SELECT\n        user_id,\n        event_time AS post_create_date,\n        ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY event_time ASC) as rn\n    FROM pa_events\n    WHERE event_name = 'post_create'\n)\nSELECT\n    fp.user_id,\n    DATE(fp.post_create_date) AS post_create_date,\n    pu.country,\n    pu.channel\nFROM FirstPost fp\nJOIN pa_users pu ON fp.user_id = pu.user_id\nWHERE fp.rn = 1\n  AND fp.post_create_date BETWEEN '2025-10-28 00:00:00' AND '2025-12-27 23:59:59'\nORDER BY post_create_date ASC;",
+    "expected_description": "각 사용자가 'post_create' 이벤트를 처음 발생시킨 날짜와 해당 사용자의 국가, 채널 정보를 보여주는 테이블입니다.",
+    "expected_columns": [
+      "user_id",
+      "post_create_date",
+      "country",
+      "channel"
+    ],
+    "sort_keys": [
+      "post_create_date"
+    ],
+    "hint": "ROW_NUMBER() 윈도우 함수를 사용하여 각 사용자별 첫 번째 'post_create' 이벤트를 식별합니다. pa_events 테이블과 pa_users 테이블을 user_id로 JOIN해야 합니다. 날짜 조건은 주어진 데이터 범위를 활용하세요.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 2066,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "post_create_date",
+          "type": "date"
+        },
+        {
+          "name": "country",
+          "type": "text"
+        },
+        {
+          "name": "channel",
+          "type": "text"
+        }
+      ],
+      "grading_table": "grading.expected_community_sql_001_set0"
+    }
+  },
+  {
+    "problem_id": "community_sql_002_set0",
+    "difficulty": "easy",
+    "topic": "engagement",
+    "requester": "마케팅팀",
+    "question": "안녕하세요 마케팅팀입니다. 서비스의 전반적인 사용자 참여 수준을 파악하기 위해, 특정 기간 동안 'view_feed' 이벤트 대비 'like' 또는 'comment' 이벤트의 비율을 계산하고 싶습니다. 이 비율을 'Engagement Rate'라고 정의하며, 2025년 11월 1일부터 2025년 12월 15일까지의 데이터를 기준으로 계산해주세요. 결과를 'engagement_rate' 기준으로 내림차순 정렬해주세요.",
+    "context": "콘텐츠에 대한 사용자 반응률은 서비스의 매력도와 사용자 경험을 나타내는 중요한 지표입니다. 이 분석을 통해 어떤 요일 또는 기간에 사용자들이 콘텐츠 소비 후 더 적극적으로 반응하는지 파악하고, 이에 맞는 마케팅 캠페인이나 콘텐츠 전략을 수립할 수 있습니다.",
+    "submission_requirements": "결과는 'date' (YYYY-MM-DD 형식)와 'engagement_rate' 컬럼을 포함해야 하며, 'engagement_rate' 기준으로 내림차순 정렬해야 합니다. 'engagement_rate'는 소수점 3자리까지 반올림해주세요. 'view_feed' 또는 'like'/'comment' 이벤트가 없는 날은 0으로 처리합니다.",
+    "answer_sql": "WITH DailyEvents AS (\n    SELECT\n        DATE(event_time) AS event_date,\n        SUM(CASE WHEN event_name = 'view_feed' THEN 1 ELSE 0 END) AS view_count,\n        SUM(CASE WHEN event_name IN ('like', 'comment') THEN 1 ELSE 0 END) AS engagement_count\n    FROM pa_events\n    WHERE event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-15 23:59:59'\n    GROUP BY event_date\n)\nSELECT\n    event_date AS date,\n    ROUND(COALESCE(engagement_count * 100.0 / NULLIF(view_count, 0), 0), 3) AS engagement_rate\nFROM DailyEvents\nORDER BY engagement_rate DESC;",
+    "expected_description": "각 날짜별로 'view_feed' 이벤트 대비 'like' 또는 'comment' 이벤트의 비율을 백분율로 보여주는 테이블입니다.",
+    "expected_columns": [
+      "date",
+      "engagement_rate"
+    ],
+    "sort_keys": [
+      "engagement_rate"
+    ],
+    "hint": "SUM(CASE WHEN ... THEN 1 ELSE 0 END)를 사용하여 각 이벤트 타입별 일별 카운트를 집계합니다. NULLIF 함수를 사용하여 division by zero를 방지하고, COALESCE 함수로 0으로 대체합니다. 날짜별로 집계하기 위해 DATE(event_time)을 사용합니다.",
+    "xp_value": 3,
+    "expected_meta": {
+      "row_count": 45,
+      "columns": [
+        {
+          "name": "date",
+          "type": "date"
+        },
+        {
+          "name": "engagement_rate",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_community_sql_002_set0"
+    }
+  },
+  {
+    "problem_id": "community_sql_003_set0",
+    "difficulty": "medium",
+    "topic": "segmentation",
+    "requester": "그로스팀",
+    "question": "안녕하세요 그로스팀입니다. 우리 서비스의 핵심 지표 중 하나인 'Creator'와 'Consumer' 비율을 분석하고 싶습니다. 'Creator'는 'post_create' 이벤트를 한 번이라도 발생시킨 사용자, 'Consumer'는 'post_create' 이벤트를 발생시키지 않았지만 다른 이벤트를 1회 이상 발생시킨 사용자로 정의합니다. 2025년 10월 28일부터 2025년 12월 27일까지의 데이터를 기준으로, 전체 사용자 대비 Creator와 Consumer의 비율을 계산해주세요. 결과를 'user_type' 기준으로 오름차순 정렬해주세요.",
+    "context": "Creator와 Consumer의 비율은 커뮤니티의 건강성을 나타내는 중요한 지표입니다. 콘텐츠 생산자와 소비자의 균형을 파악함으로써, 콘텐츠 생태계가 활발하게 유지되고 있는지, 혹은 특정 그룹에 편중되어 있는지 진단할 수 있습니다. 이를 통해 콘텐츠 생산을 장려하거나 콘텐츠 소비를 유도하는 전략을 구체화할 수 있습니다.",
+    "submission_requirements": "결과는 'user_type' (Creator, Consumer)과 'user_percentage' 컬럼을 포함해야 하며, 'user_type' 기준으로 오름차순 정렬해야 합니다. 'user_percentage'는 소수점 3자리까지 반올림해주세요. Creator와 Consumer 모두 해당되지 않는 사용자는 제외합니다. 'post_create' 이벤트만 발생시키고 다른 이벤트는 발생시키지 않은 사용자는 Creator로만 분류합니다.",
+    "answer_sql": "WITH UserEventCounts AS (\n    SELECT\n        user_id,\n        SUM(CASE WHEN event_name = 'post_create' THEN 1 ELSE 0 END) AS post_creates,\n        COUNT(event_id) AS total_events\n    FROM pa_events\n    WHERE event_time BETWEEN '2025-10-28 00:00:00' AND '2025-12-27 23:59:59'\n    GROUP BY user_id\n),\nUserTypes AS (\n    SELECT\n        user_id,\n        CASE\n            WHEN post_creates > 0 THEN 'Creator'\n            WHEN post_creates = 0 AND total_events > 0 THEN 'Consumer'\n            ELSE 'Other'\n        END AS user_type\n    FROM UserEventCounts\n),\nTypeCounts AS (\n    SELECT\n        user_type,\n        COUNT(user_id) AS count\n    FROM UserTypes\n    WHERE user_type IN ('Creator', 'Consumer')\n    GROUP BY user_type\n),\nTotalActiveUsers AS (\n    SELECT COUNT(DISTINCT user_id) AS total_count\n    FROM UserEventCounts\n    WHERE post_creates > 0 OR total_events > 0\n)\nSELECT\n    tc.user_type,\n    ROUND(tc.count * 100.0 / tau.total_count, 3) AS user_percentage\nFROM TypeCounts tc\nCROSS JOIN TotalActiveUsers tau\nORDER BY tc.user_type ASC;",
+    "expected_description": "주어진 기간 동안 서비스 내 'Creator'와 'Consumer' 사용자의 비율을 백분율로 나타내는 테이블입니다.",
+    "expected_columns": [
+      "user_type",
+      "user_percentage"
+    ],
+    "sort_keys": [
+      "user_type"
+    ],
+    "hint": "CTE (Common Table Expression)를 활용하여 사용자별 이벤트 수를 집계하고, 각 사용자를 Creator 또는 Consumer로 분류합니다. 마지막으로 총 활성 사용자 수를 기준으로 비율을 계산합니다. 'post_create' 이벤트만 가지고 다른 이벤트가 없는 사용자는 Creator로만 분류하는 로직에 유의하세요.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 2,
+      "columns": [
+        {
+          "name": "user_type",
+          "type": "text"
+        },
+        {
+          "name": "user_percentage",
+          "type": "numeric"
+        }
+      ],
+      "grading_table": "grading.expected_community_sql_003_set0"
+    }
+  },
+  {
+    "problem_id": "community_sql_004_set0",
+    "difficulty": "medium",
+    "topic": "activation",
+    "requester": "커뮤니티팀",
+    "question": "안녕하세요 커뮤니티팀입니다. 서비스의 'Daily Active Creators' (DAC) 지표를 정의하고 계산하려고 합니다. DAC는 'post_create' 이벤트를 발생시킨 모든 사용자를 의미합니다. 2025년 11월 1일부터 2025년 12월 15일까지 각 일자별 DAC 수를 계산해주세요. 결과를 'date' 기준으로 오름차순 정렬해주세요.",
+    "context": "'Daily Active Creators'는 우리 커뮤니티의 핵심 콘텐츠 생산자 활동성을 나타내는 가장 중요한 지표입니다. 이 지표를 추적함으로써 콘텐츠 생태계의 건강성을 실시간으로 파악하고, 생산자 활동을 촉진하기 위한 다양한 운영 및 프로덕트 개선 활동의 효과를 측정할 수 있습니다.",
+    "submission_requirements": "결과는 'date' (YYYY-MM-DD 형식)와 'daily_active_creators' 컬럼을 포함해야 하며, 'date' 기준으로 오름차순 정렬해야 합니다. 'post_create' 이벤트가 없는 날은 'daily_active_creators'를 0으로 표시해주세요.",
+    "answer_sql": "WITH DateRange AS (\n    SELECT generate_series('2025-11-01'::date, '2025-12-15'::date, '1 day'::interval) AS dt\n),\nDailyCreators AS (\n    SELECT\n        DATE(event_time) AS event_date,\n        COUNT(DISTINCT user_id) AS creators_count\n    FROM pa_events\n    WHERE event_name = 'post_create'\n      AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-15 23:59:59'\n    GROUP BY event_date\n)\nSELECT\n    dr.dt AS date,\n    COALESCE(dc.creators_count, 0) AS daily_active_creators\nFROM DateRange dr\nLEFT JOIN DailyCreators dc ON dr.dt = dc.event_date\nORDER BY dr.dt ASC;",
+    "expected_description": "각 날짜별로 'post_create' 이벤트를 발생시킨 고유한 사용자 수를 보여주는 테이블입니다. 'post_create' 이벤트가 없는 날은 0으로 표시됩니다.",
+    "expected_columns": [
+      "date",
+      "daily_active_creators"
+    ],
+    "sort_keys": [
+      "date"
+    ],
+    "hint": "generate_series 함수를 사용하여 분석 기간 동안의 모든 날짜를 생성하고, LEFT JOIN을 통해 각 날짜별 'post_create' 이벤트 수를 연결합니다. COALESCE 함수를 사용하여 'post_create' 이벤트가 없는 날은 0으로 표시합니다.",
+    "xp_value": 5,
+    "expected_meta": {
+      "row_count": 45,
+      "columns": [
+        {
+          "name": "date",
+          "type": "timestamp with time zone"
+        },
+        {
+          "name": "daily_active_creators",
+          "type": "bigint"
+        }
+      ],
+      "grading_table": "grading.expected_community_sql_004_set0"
+    }
+  },
+  {
+    "problem_id": "community_sql_005_set0",
+    "difficulty": "hard",
+    "topic": "engagement",
+    "requester": "그로스팀",
+    "question": "안녕하세요 그로스팀입니다. 서비스의 바이럴 루프를 분석하기 위해, 'follow' → 'post_create' → 'like' 패턴을 따르는 사용자를 식별하고 싶습니다. 구체적으로, 어떤 사용자가 다른 사용자 A를 'follow'하고, 이후 A가 'post_create'한 게시물에 'like'를 누르는지 추적하고 싶습니다. 이 패턴이 2025년 11월 1일부터 2025년 12월 15일 사이에 발생한 경우, 'follower_id', 'followed_id', 'post_create_time', 'like_time' 정보를 추출해주세요. 'post_create_time' 기준으로 오름차순 정렬해주세요.",
+    "context": "사용자 간의 상호작용은 서비스의 성장 동력입니다. 'follow'를 통해 관계를 맺고, 'post_create'로 콘텐츠가 생성되며, 'like'로 콘텐츠의 가치가 인정되는 이 흐름은 커뮤니티 내에서 긍정적인 바이럴 효과를 창출할 수 있습니다. 이 패턴을 분석하여 바이럴 루프의 참여자를 파악하고, 이를 강화할 방법을 모색하고자 합니다.",
+    "submission_requirements": "결과는 'follower_id', 'followed_id', 'post_create_time', 'like_time' 컬럼을 포함해야 하며, 'post_create_time' 기준으로 오름차순 정렬해야 합니다. 모든 시간 정보는 TIMESTAMP 형태로 제공됩니다. 'follow' 이후 'post_create' 및 'like'가 발생해야 하며, 'like'는 'post_create'로 생성된 게시물에 대해 이루어져야 합니다. (주의: pa_orders 테이블은 사용하지 않습니다.)",
+    "answer_sql": "WITH Follows AS (\n    SELECT\n        user_id AS follower_id,\n        event_time AS follow_time\n    FROM pa_events\n    WHERE event_name = 'follow'\n      AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-15 23:59:59'\n),\nPosts AS (\n    SELECT\n        user_id AS creator_id,\n        event_time AS post_create_time,\n        event_id AS post_event_id\n    FROM pa_events\n    WHERE event_name = 'post_create'\n      AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-15 23:59:59'\n),\nLikes AS (\n    SELECT\n        user_id AS liker_id,\n        event_time AS like_time,\n        session_id -- session_id를 사용하여 post_create와 연결 가능성 확인\n    FROM pa_events\n    WHERE event_name = 'like'\n      AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-15 23:59:59'\n)\n-- 복잡한 상호작용을 분석하기 위해 여러 CTE를 조인\n-- 1. follow -> post_create : follower가 post_create 사용자 A를 follow하고, A가 post_create\nSELECT\n    f.follower_id,\n    p.creator_id AS followed_id,\n    p.post_create_time\nFROM Follows f\nJOIN Posts p ON f.follower_id != p.creator_id AND f.follow_time < p.post_create_time\nWHERE f.follower_id = p.creator_id -- 이 조건은 'follower가 post_create 사용자 A를 follow'가 아니라 'follower가 follow한 A라는 사용자가 post_create'를 의미\n-- 위의 주석이 잘못되었습니다. 다시 작성합니다.\n-- 1. Follows: 누가 누구를 follow 했는지\n-- 2. Posts: 누가 언제 post를 작성했는지\n-- 3. Likes: 누가 언제 like를 했는지 (어떤 게시물에 like 했는지 직접적인 FK가 없으므로, session_id 또는 event_time 기반으로 추정/연결 필요 - 이 문제는 direct FK가 없어서 hard 난이도)\n-- session_id를 활용하여 간접적으로 연결하는 것은 pa_events 스키마에 direct FK가 없으므로 제한적입니다.\n-- 문제에서 'A가 post_create한 게시물에 like를 누르는지'를 명시하므로, 'post_create' event와 'like' event 간의 'user_id'가 같고, 'like_time'이 'post_create_time' 이후인 경우를 찾아야 합니다. \n-- 그러나 'like' event에는 어떤 게시물에 좋아요를 눌렀는지에 대한 정보가 없습니다. \n-- 문제 의도를 'follow 후, follow 대상이 만든 게시물에 좋아요를 누르는 경우'로 해석하고, 'follow 대상'은 'post_create' 이벤트를 발생시킨 사용자로 가정하며, 'like' 이벤트 발생 시점에 'follow 대상'이 'post_create'한 게시물이 존재해야 함을 조건으로 합니다.\n\n-- 이 문제는 'like' event가 어떤 'post_create' event와 연결되는지에 대한 직접적인 정보가 pa_events 테이블에 없으므로, session_id를 통한 간접 연결이나 시간 순서 기반의 추정 외에는 방법이 없습니다.\n-- session_id는 post_create와 like 간의 직접적인 연결을 보장하지 않습니다. \n-- 가장 현실적인 해석은, 'follow' 관계를 맺은 후, 'follow 대상' 사용자가 'post_create'한 게시물에 'follow한 사용자'가 'like'를 누르는 시나리오를 찾는 것입니다.\n-- 그러나 'like' 이벤트는 해당 게시물의 event_id를 FK로 가지고 있지 않습니다. 따라서 'post_create' 이벤트와 'like' 이벤트를 직접적으로 연결하기 어렵습니다.\n-- 문제의 'hard' 난이도와 'follow → post_create → like' 패턴 분석 요구사항을 충족하기 위해, 다음과 같은 가정 하에 SQL을 작성합니다:\n-- 1. 'follow' 이벤트에서 'follower_id'와 'followed_id'를 찾습니다.\n-- 2. 'post_create' 이벤트에서 'creator_id' (followed_id와 일치해야 함)와 'post_create_time'을 찾습니다.\n-- 3. 'like' 이벤트에서 'liker_id' (follower_id와 일치해야 함)와 'like_time'을 찾습니다.\n-- 4. 'follow_time' < 'post_create_time' < 'like_time' 조건을 만족하는 행을 찾습니다.\n-- 5. 'like' 이벤트가 어떤 게시물에 대한 것인지 직접 알 수 없으므로, 'follow 대상'의 'post_create' 이후에 'follower'가 'like' 이벤트를 발생시켰다면, 그 'like'가 'follow 대상'의 게시물에 대한 것이라고 가정합니다. (이는 실제로는 불확실할 수 있습니다.)\n\n-- 수정된 SQL:\nWITH FollowEvents AS (\n    SELECT\n        user_id AS follower_id,\n        event_time AS follow_time,\n        session_id AS follow_session_id -- session_id도 함께 가져옴\n    FROM pa_events\n    WHERE event_name = 'follow'\n      AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-15 23:59:59'\n),\nPostEvents AS (\n    SELECT\n        user_id AS creator_id,\n        event_time AS post_create_time,\n        event_id AS post_event_id,\n        session_id AS post_session_id\n    FROM pa_events\n    WHERE event_name = 'post_create'\n      AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-15 23:59:59'\n),\nLikeEvents AS (\n    SELECT\n        user_id AS liker_id,\n        event_time AS like_time,\n        session_id AS like_session_id\n    FROM pa_events\n    WHERE event_name = 'like'\n      AND event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-15 23:59:59'\n)\nSELECT DISTINCT\n    fe.follower_id,\n    pe.creator_id AS followed_id,\n    pe.post_create_time,\n    le.like_time\nFROM FollowEvents fe\nJOIN PostEvents pe ON fe.follower_id = pe.creator_id AND fe.follow_time < pe.post_create_time -- Follower가 Post Creator와 동일하고, follow가 post_create 이전\nJOIN LikeEvents le ON fe.follower_id = le.liker_id AND pe.post_create_time < le.like_time -- Follower가 like를 눌렀고, like가 post_create 이후\nWHERE fe.follower_id != pe.creator_id -- Follower와 Creator는 달라야 함 (self-follow 방지, 필요시)\n  AND fe.follower_id = le.liker_id -- Follower가 Like를 눌렀다는 조건을 명시적으로 다시 확인\n  -- 문제는 'A가 post_create한 게시물에 like를 누르는지'인데, like 이벤트는 게시물 ID를 가지지 않습니다.\n  -- 따라서, follow한 대상(followed_id)이 post_create 한 이후, follow한 사용자(follower_id)가 like를 누른 경우를 찾는 것으로 해석합니다.\n  -- 이 해석은 like 이벤트가 반드시 follow 대상의 게시물에 눌린 것이라고 보장하지는 못합니다.\n  -- 만약 'followed_id'가 'post_create' 한 이후, 'follower_id'가 'like' 이벤트를 발생시켰다면, 그 'like'가 'followed_id'의 게시물에 대한 것이라고 가정하는 것입니다.\n  -- 이 문제의 근본적인 어려움은 'like' 이벤트에 'target_post_id' 와 같은 정보가 없다는 것입니다.\n  -- 따라서, 가장 합리적인 추정은 'follow' 관계를 맺은 후, 'follow 대상' 사용자가 'post_create'한 게시물이 존재하고, 같은 시간 범위 내에 'follow한 사용자'가 'like' 이벤트를 발생시켰다면, 이 패턴에 해당한다고 보는 것입니다.\n  -- 이 쿼리는 'follower_id'가 'creator_id'를 'follow' 한 후, 'creator_id'가 'post_create' 한 후, 'follower_id'가 'like'를 누른 패턴을 찾습니다.\n  -- 'followed_id'는 'creator_id'로 매핑됩니다.\nORDER BY pe.post_create_time ASC;",
+    "expected_description": "사용자가 다른 사용자를 팔로우한 후, 해당 팔로우 대상이 게시물을 생성하고, 팔로워가 해당 게시물에 좋아요를 누르는 바이럴 패턴에 해당하는 사용자들의 정보를 보여줍니다. 'follower_id', 'followed_id', 'post_create_time', 'like_time'을 포함합니다.",
+    "expected_columns": [
+      "follower_id",
+      "followed_id",
+      "post_create_time",
+      "like_time"
+    ],
+    "sort_keys": [
+      "post_create_time"
+    ],
+    "hint": "3개의 CTE (FollowEvents, PostEvents, LikeEvents)를 사용하여 각 이벤트 유형별 데이터를 준비합니다. FollowEvents CTE와 PostEvents CTE를 조인하여 'follow'가 'post_create' 이전에 발생했는지 확인합니다. 마지막으로 PostEvents CTE와 LikeEvents CTE를 조인하여 'post_create' 이후 'like'가 발생했는지 확인합니다. User ID 간의 관계 및 시간 순서를 정확하게 설정하는 것이 중요합니다. 'like' 이벤트가 특정 게시물을 지칭하지 않으므로, 시간 순서와 사용자 관계를 기반으로 추정해야 합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "error": "syntax error at or near \"FollowEvents\"\nLINE 57: WITH FollowEvents AS (\n              ^\n"
+    }
+  },
+  {
+    "problem_id": "community_sql_006_set0",
+    "difficulty": "hard",
+    "topic": "segmentation",
+    "requester": "마케팅팀",
+    "question": "안녕하세요 마케팅팀입니다. 서비스의 영향력 있는 사용자, 즉 '인플루언서'를 정의하고 그들의 활동을 분석하고 싶습니다. '인플루언서'를 '2025년 11월 1일부터 2025년 12월 15일 사이에 100개 이상의 'like' 또는 'comment' 이벤트를 받은 사용자'로 정의합니다. 이 기준에 부합하는 인플루언서들의 'user_id', 총 받은 'like' 수, 총 받은 'comment' 수, 그리고 그들의 'country'와 'channel' 정보를 제공해주세요. 'like' 수 기준으로 내림차순 정렬해주세요.",
+    "context": "커뮤니티 내에서 영향력 있는 사용자를 발굴하고 지원하는 것은 콘텐츠 생태계를 활성화하고 전반적인 사용자 참여를 증진시키는 데 매우 중요합니다. 인플루언서들의 활동 패턴을 이해하면, 이들을 활용한 마케팅 캠페인이나 콘텐츠 전략을 더욱 효과적으로 수립할 수 있습니다. 'like'와 'comment'를 받은 수를 기준으로 영향력을 측정하는 것은 사용자의 콘텐츠가 커뮤니티로부터 얼마나 긍정적인 피드백을 받는지 보여줍니다.",
+    "answer_sql": "WITH UserEngagement AS (\n    SELECT\n        user_id,\n        SUM(CASE WHEN event_name = 'like' THEN 1 ELSE 0 END) AS received_likes,\n        SUM(CASE WHEN event_name = 'comment' THEN 1 ELSE 0 END) AS received_comments\n    FROM pa_events\n    WHERE event_time BETWEEN '2025-11-01 00:00:00' AND '2025-12-15 23:59:59'\n    GROUP BY user_id\n)\nSELECT\n    ue.user_id,\n    ue.received_likes,\n    ue.received_comments,\n    pu.country,\n    pu.channel\nFROM UserEngagement ue\nJOIN pa_users pu ON ue.user_id = pu.user_id\nWHERE ue.received_likes >= 100 OR ue.received_comments >= 100 -- 문제에서 '100개 이상의 like **또는** comment'로 정의했으므로 OR 사용\nORDER BY ue.received_likes DESC;",
+    "expected_description": "2025년 11월 1일부터 2025년 12월 15일 사이에 100개 이상의 'like' 또는 'comment'를 받은 사용자(인플루언서)들의 ID, 받은 좋아요/댓글 수, 국가, 채널 정보를 보여주는 테이블입니다.",
+    "expected_columns": [
+      "user_id",
+      "received_likes",
+      "received_comments",
+      "country",
+      "channel"
+    ],
+    "sort_keys": [
+      "received_likes"
+    ],
+    "hint": "pa_events 테이블에서 'like'와 'comment' 이벤트에 대해 각 사용자별로 집계합니다. SUM(CASE WHEN ... THEN 1 ELSE 0 END)를 사용하여 각 이벤트 유형별 카운트를 구합니다. 그 후, pa_users 테이블과 JOIN하여 사용자 정보를 가져옵니다. WHERE 절에서 'like' 또는 'comment' 수가 100개 이상인 사용자만 필터링합니다. 'like' 수 기준으로 내림차순 정렬합니다.",
+    "xp_value": 8,
+    "expected_meta": {
+      "row_count": 0,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "received_likes",
+          "type": "bigint"
+        },
+        {
+          "name": "received_comments",
+          "type": "bigint"
+        },
+        {
+          "name": "country",
+          "type": "text"
+        },
+        {
+          "name": "channel",
+          "type": "text"
+        }
+      ],
+      "grading_table": "grading.expected_community_sql_006_set0"
+    }
+  }
+]
