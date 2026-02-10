@@ -5,21 +5,53 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 import logging
 
-# Set ENV to production
-os.environ["ENV"] = "production"
+# Set ENV to production temporarily for import
+# We use mock.patch.dict to ensure it doesn't leak, but we need it set
+# BEFORE importing main.py if main.py reads it at module level.
+# However, main.py reads os.getenv("ENV") inside the middleware definition block
+# AND at module level for CORSMiddleware.
 
-# Mock dependencies
-with patch("backend.services.db_init.init_database", return_value=(True, None)):
-    # We need to mock postgres_connection because it's used in health check
-    mock_pg = MagicMock()
-    mock_pg.__enter__.return_value.execute.return_value = None
+# Strategy:
+# 1. Use patch.dict to set ENV=production
+# 2. Import app
+# 3. Reload app or ensure the import happens within the patch context?
+# Since pytest collects tests before running, module level code runs at collection time.
 
-    with patch("backend.services.database.postgres_connection", return_value=mock_pg):
-        from backend.main import app
+# Better approach for this specific test file:
+# Since we need to test production configuration which happens at module level in main.py,
+# we should wrap the import in a fixture or setup that patches os.environ.
+# BUT, main.py is likely imported by other tests too.
+# If main.py is already imported, reloading it is necessary to pick up the new ENV.
 
-client = TestClient(app)
+import importlib
+import backend.main
 
-def test_cors_origin_allowed(caplog):
+@pytest.fixture(scope="module")
+def client():
+    # Patch environment to production
+    with patch.dict(os.environ, {"ENV": "production"}):
+        # Reload backend.main to re-evaluate module-level logic (CORS setup)
+        importlib.reload(backend.main)
+
+        # We also need to mock dependencies that might be initialized
+        with patch("backend.services.db_init.init_database", return_value=(True, None)):
+            mock_pg = MagicMock()
+            mock_pg.__enter__.return_value.execute.return_value = None
+
+            with patch("backend.services.database.postgres_connection", return_value=mock_pg):
+                # Return client
+                yield TestClient(backend.main.app)
+
+    # Cleanup: Reload backend.main with original environment (development)
+    # This ensures subsequent tests (like test_integration.py) get the clean state
+    # assuming they run after this module.
+    # Note: If tests run in parallel or random order, this might be tricky,
+    # but preventing pollution is key.
+    if "ENV" in os.environ and os.environ["ENV"] == "production":
+        del os.environ["ENV"]
+    importlib.reload(backend.main)
+
+def test_cors_origin_allowed(client, caplog):
     caplog.set_level(logging.INFO)
 
     origin = "https://query-craft-frontend-758178119666.us-central1.run.app"
@@ -32,9 +64,6 @@ def test_cors_origin_allowed(caplog):
     assert response.headers["access-control-allow-origin"] == origin
 
     # Check logs
-    # Note: backend uses its own logger setup, but caplog should capture root logger logs if propagated
-    # backend.common.logging.get_logger returns logging.getLogger(name)
-
     log_messages = [r.message for r in caplog.records]
     found = False
     for msg in log_messages:
@@ -42,12 +71,9 @@ def test_cors_origin_allowed(caplog):
             found = True
             break
 
-    if not found:
-        print("Captured Logs:", log_messages)
+    assert found, f"CORS Success log not found. Logs: {log_messages}"
 
-    assert found, "CORS Success log not found"
-
-def test_cors_origin_disallowed(caplog):
+def test_cors_origin_disallowed(client, caplog):
     caplog.set_level(logging.WARNING)
 
     origin = "https://evil-site.com"
@@ -65,7 +91,4 @@ def test_cors_origin_disallowed(caplog):
             found = True
             break
 
-    if not found:
-        print("Captured Logs:", log_messages)
-
-    assert found, "CORS Failed log not found"
+    assert found, f"CORS Failed log not found. Logs: {log_messages}"
