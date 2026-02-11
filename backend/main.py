@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.common.middleware import PathRewriteMiddleware, ExceptionHandlingMiddleware
+from backend.common.middleware import PathRewriteMiddleware, ExceptionHandlingMiddleware, CORSLoggingMiddleware
 from backend.api.problems import router as problems_router
 from backend.api.sql import router as sql_router
 from backend.api.stats import router as stats_router
@@ -101,7 +101,7 @@ app.add_middleware(ExceptionHandlingMiddleware)
 # Cloud Run 도메인 및 Regex 정의 (환경 무관하게 참조 가능하도록)
 cloud_origins = [
     "https://query-craft-frontend-53ngedkhia-uc.a.run.app",
-    "https://query-craft-frontend-758178119666.us-central1.run.app",
+    "https://query-craft-frontend-758178119666.us-central1.run.app", # Verified as per issue report
     "https://query-craft-frontend-758178119666.a.run.app", # 추가
     "https://querycraft.run.app",  # 커스텀 도메인 예비
 ]
@@ -133,6 +133,9 @@ else:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# CORS Logging Middleware (CORS 설정 이후에 추가하여 바깥쪽에서 감싸도록 함)
+app.add_middleware(CORSLoggingMiddleware)
     
 # 404 및 기타 에러 로깅 미들웨어
 @app.middleware("http")
