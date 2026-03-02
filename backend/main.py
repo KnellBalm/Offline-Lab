@@ -101,8 +101,8 @@ app.add_middleware(ExceptionHandlingMiddleware)
 # Cloud Run 도메인 및 Regex 정의 (환경 무관하게 참조 가능하도록)
 cloud_origins = [
     "https://query-craft-frontend-53ngedkhia-uc.a.run.app",
-    "https://query-craft-frontend-758178119666.us-central1.run.app",
-    "https://query-craft-frontend-758178119666.a.run.app", # 추가
+    "https://query-craft-frontend-758178119666.us-central1.run.app",  # Reported issue origin
+    "https://query-craft-frontend-758178119666.a.run.app",
     "https://querycraft.run.app",  # 커스텀 도메인 예비
 ]
 # 좀 더 유연한 regex: query-craft-frontend로 시작하는 모든 .run.app 도메인 허용

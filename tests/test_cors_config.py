@@ -5,7 +5,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Set ENV to production before importing backend.main to ensure production CORS settings are used
+# Also set POSTGRES_DSN to a dummy value to pass the production config check
 os.environ["ENV"] = "production"
+os.environ["POSTGRES_DSN"] = "postgresql://user:pass@localhost:5432/db"
 
 try:
     from backend.main import app
