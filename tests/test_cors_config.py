@@ -4,6 +4,9 @@ import sys
 import pytest
 from fastapi.testclient import TestClient
 
+# Save original ENV
+original_env = os.environ.get("ENV")
+
 # Set ENV to production before importing backend.main to ensure production CORS settings are used
 os.environ["ENV"] = "production"
 
@@ -12,6 +15,13 @@ try:
 except ImportError:
     sys.path.append(os.getcwd())
     from backend.main import app
+finally:
+    # Restore original ENV immediately after import
+    # The app object is already created with production settings
+    if original_env is None:
+        del os.environ["ENV"]
+    else:
+        os.environ["ENV"] = original_env
 
 class TestCORSConfig:
     """Test CORS configuration for the backend."""
