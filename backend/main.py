@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.common.middleware import PathRewriteMiddleware, ExceptionHandlingMiddleware
+from backend.common.middleware import PathRewriteMiddleware, ExceptionHandlingMiddleware, CORSLoggingMiddleware
 from backend.api.problems import router as problems_router
 from backend.api.sql import router as sql_router
 from backend.api.stats import router as stats_router
@@ -133,6 +133,10 @@ else:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# CORS Logging Middleware 등록
+# CORS 미들웨어보다 나중에 등록하여 바깥쪽에 위치하게 함 (응답 헤더 확인용)
+app.add_middleware(CORSLoggingMiddleware)
     
 # 404 및 기타 에러 로깅 미들웨어
 @app.middleware("http")
