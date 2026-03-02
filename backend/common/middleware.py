@@ -3,6 +3,8 @@ from starlette.responses import JSONResponse
 from fastapi import Request
 from backend.common.logging import get_logger
 
+logger = get_logger("backend.middleware")
+
 class PathRewriteMiddleware(BaseHTTPMiddleware):
     """
     Rewrite paths for backward compatibility or convenience.
@@ -28,9 +30,19 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
         try:
             return await call_next(request)
         except Exception as e:
-            logger = get_logger("backend.middleware.exception")
             logger.error(f"Unhandled exception: {str(e)}", exc_info=True)
             return JSONResponse(
                 status_code=500,
                 content={"detail": "Internal Server Error"}
             )
+
+class LogOriginMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to log the Origin header of incoming requests for CORS debugging.
+    """
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin")
+        if origin:
+            # Using a dedicated logger or the common one
+            logger.info(f"Incoming CORS Request - Origin: {origin} | Path: {request.url.path} | Method: {request.method}")
+        return await call_next(request)

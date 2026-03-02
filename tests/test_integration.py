@@ -5,6 +5,7 @@ PostgreSQL 연결이 필요한 테스트는 @pytest.mark.integration 마커 사�
 """
 import pytest
 import os
+from unittest import mock
 from datetime import date
 
 # 통합 테스트 마커
@@ -26,8 +27,11 @@ class TestConfigSettings:
     def test_db_config_loads(self):
         """config.db 모듈이 에러 없이 로드되어야 함"""
         from backend.config.db import PostgresEnv, get_duckdb_path
-        env = PostgresEnv()
-        assert env.dsn() is not None
+
+        # 다른 테스트에서 ENV를 production으로 설정할 수 있으므로 강제로 development로 설정
+        with mock.patch.dict(os.environ, {"ENV": "development"}):
+            env = PostgresEnv()
+            assert env.dsn() is not None
         assert get_duckdb_path() is not None
 
 
