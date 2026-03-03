@@ -26,9 +26,20 @@ class TestConfigSettings:
     def test_db_config_loads(self):
         """config.db 모듈이 에러 없이 로드되어야 함"""
         from backend.config.db import PostgresEnv, get_duckdb_path
-        env = PostgresEnv()
-        assert env.dsn() is not None
-        assert get_duckdb_path() is not None
+
+        # Ensure we are testing in a safe environment context,
+        # as other tests might have set ENV=production globally.
+        original_env = os.environ.get("ENV")
+        os.environ["ENV"] = "development"
+        try:
+            env = PostgresEnv()
+            assert env.dsn() is not None
+            assert get_duckdb_path() is not None
+        finally:
+            if original_env:
+                os.environ["ENV"] = original_env
+            else:
+                os.environ.pop("ENV", None)
 
 
 class TestDailyPipeline:

@@ -44,6 +44,22 @@ class TestCORSConfig:
             headers={"Origin": origin}
         )
         assert response.headers.get("access-control-allow-origin") == origin
+
+    def test_cors_trailing_slash_origin(self):
+        """
+        Verify that an origin with a trailing slash is handled correctly.
+        """
+        origin = "https://query-craft-frontend-758178119666.us-central1.run.app/"
+        client = TestClient(app)
+
+        response = client.options(
+            "/auth/me",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET",
+            }
+        )
+        assert response.headers.get("access-control-allow-origin") == origin
         assert response.headers.get("access-control-allow-credentials") == "true"
 
     def test_cors_cloud_run_domain_regex(self):
